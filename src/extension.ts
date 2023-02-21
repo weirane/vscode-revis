@@ -84,7 +84,7 @@ function decorateImage() {
     image2decoration(i502, 4),
     image2decoration(i503, 12),
     image2decoration(i505, 24),
-    image2decoration(i597, 60),
+    image2decoration(i597, 61),
   ]);
 }
 
@@ -136,36 +136,13 @@ function image505(width: number, height: number, borrow: string, move: string, t
 function image597(): Svg {
   const svgimg = newSvg(800, 7 * G.lineheight);
   const canvas = svgimg.group().attr({
-    fill: 'cyan',
-    // eslint-disable-next-line
-    'text-anchor': 'middle',
-    transform: 'translate(240, 0)',
-    style: `font-family: sans-serif; font-size: ${G.fontsize}px; overflow: visible;`,
+    fill: 'transparent',
+    transform: 'translate(80, 0)',
+    style: `font-family: monospace; font-size: ${G.fontsize}px; overflow: visible;`,
   });
-  const cellwidth = 10;
-  canvas.text((add) => {
-    add.tspan('y').attr({ x: `0em` });
-    add.tspan('x.x').attr({ x: `${cellwidth}em` });
-  }).attr({ y: G.fontsize, style: 'font-weight: bold' });
-  canvas.text((add) => {
-    add.tspan('`y` created').attr({ dx: 0 });
-  }).attr({ y: G.fontsize + G.lineheight });
-  canvas.text((add) => {
-    add.tspan('refering `y`').attr({ dx: `${cellwidth}em`});
-  }).attr({ y: G.fontsize + 2 * G.lineheight });
-  canvas.text((add) => {
-    add.tspan('`y` dropped').attr({ dx: 0 });
-  }).attr({ y: G.fontsize + 3 * G.lineheight });
-  canvas.text((add) => {
-    add.tspan('refering a dropped value').attr({ dx: `${cellwidth}em` });
-  }).attr({ y: G.fontsize + 4 * G.lineheight, fill: 'red' });
-  canvas.text('tip: make sure x.x is refering to a valid value.\nrefer it to a new value or prolong the lifetime of `y`').attr({
-    x: 0,
-    y: G.fontsize + 5 * G.lineheight,
-    fill: 'white',
-    // eslint-disable-next-line
-    'text-anchor': 'start',
-  });
+  canvas.path(`M0,0 L10,0 l0,${G.lineheight * 3} l-10,0`).stroke('cyan');
+  canvas.plain("`y`'s lifetime").fill('cyan').attr({ x: 20, y: 1.5 * G.lineheight});
+  canvas.plain('`x.x` still refers to `y`, but `y` doesn\'t exist anymore').fill('red').attr({ x: 0, y: G.fontsize + 3 * G.lineheight});
   return svgimg;
 }
 
