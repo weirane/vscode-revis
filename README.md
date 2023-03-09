@@ -12,7 +12,7 @@ Install [rust-analyzer][] and add the following to `settings.json`:
 ```
 
 
-[rust-analyzer]: https://github.com/rust/rust-analyzer
+[rust-analyzer]: https://github.com/rust-lang/rust-analyzer
 
 ## Extension Settings
 
