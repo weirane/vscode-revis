@@ -16,8 +16,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "errorviz.helloWorld",
-        "title": "Hello World"
+        "command": "errorviz.toggleVisualization",
+        "title": "errorviz: Toggle Visualization"
       }
     ]
   },
