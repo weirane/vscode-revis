@@ -1,6 +1,7 @@
 {
   "name": "errorviz",
   "displayName": "errorviz",
+  "repository": {"type": "git", "url": "https://github.com/weirane/vscode-errorviz"},
   "description": "",
   "version": "0.0.1",
   "engines": {
