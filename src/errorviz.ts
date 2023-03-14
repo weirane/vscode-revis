@@ -58,6 +58,13 @@ function newSvg(width: number, height: number): Svg {
   return (<Svg>SVG(document.documentElement)).size(width, height);
 }
 
+function littleTriangle(): Svg {
+  const sidelength = 9;
+  const sign = newSvg(sidelength, sidelength * 0.866);
+  sign.path(`M${sidelength / 2},0 L0,${sidelength * 0.866} l${sidelength},0`).fill("#ff3300");
+  return sign;
+}
+
 export type DiagnosticInfo = {
   diagnostics: vscode.Diagnostic;
   displayed: boolean;
@@ -68,19 +75,15 @@ export const G = {
   fontsize: vscode.workspace.getConfiguration("editor").get<number>("fontSize") ?? 14,
   charwidth: 10,
   lineheight: 0,
-  dectype: vscode.window.createTextEditorDecorationType({ isWholeLine: true }),
+  triangleDtype: vscode.window.createTextEditorDecorationType({
+    isWholeLine: true,
+    gutterIconPath: svg2uri(littleTriangle()),
+  }),
   diags: new Map<string, DiagnosticInfo>(),
   showTriangles(diags: Map<string, DiagnosticInfo> | null = null) {
     if (diags === null) {
       diags = this.diags;
     }
-    const sidelength = 9;
-    const sign = newSvg(sidelength, sidelength * 0.866);
-    sign.path(`M${sidelength / 2},0 L0,${sidelength * 0.866} l${sidelength},0`).fill("#ff3300");
-    const dtype = vscode.window.createTextEditorDecorationType({
-      isWholeLine: true,
-      gutterIconPath: svg2uri(sign),
-    });
     const ranges = Array.from(diags.keys()).map((k) => {
       const line = parseInt(k);
       return new vscode.Range(line, 0, line, 0);
@@ -90,7 +93,7 @@ export const G = {
       log.error("no editor");
       return;
     }
-    editor.setDecorations(dtype, ranges);
+    editor.setDecorations(this.triangleDtype, ranges);
   },
   hideDiag(idx: string, diags: Map<string, DiagnosticInfo> | null = null) {
     if (diags === null) {
@@ -154,24 +157,32 @@ function imageByCode(
   editor: vscode.TextEditor,
   diag: vscode.Diagnostic
 ): vscode.DecorationOptions | string {
-  if (typeof diag.code === "number" || typeof diag.code === "string") {
-    log.error("unexpected diag.code type");
+  if (
+    typeof diag.code === "number" ||
+    typeof diag.code === "string" ||
+    typeof diag.code?.value !== "string"
+  ) {
+    log.error("unexpected diag.code type", diag.code);
     return "unexpected diag.code type";
   }
-  switch (diag.code!.value) {
-    case "E0502":
-      return image502(editor, diag);
-    case "E0503":
-      return image503(editor, diag);
-    case "E0505":
-      return image505(editor, diag);
-    case "E0506":
-      return image506(editor, diag);
-    case "E0597":
-      return image597(editor, diag);
-    default:
-      log.info(`unsupported error code ${diag.code!.value}`);
-      return `unsupported error code ${diag.code!.value}`;
+
+  const codeFuncMap: Map<
+    string,
+    (editor: vscode.TextEditor, diag: vscode.Diagnostic) => string | vscode.DecorationOptions
+  > = new Map([
+    ["E0382", image382],
+    ["E0502", image502],
+    ["E0503", image503],
+    ["E0505", image505],
+    ["E0506", image506],
+    ["E0597", image597],
+  ]);
+  const func = codeFuncMap.get(diag.code!.value);
+  if (func === undefined) {
+    log.info(`unsupported error code ${diag.code!.value}`);
+    return `unsupported error code ${diag.code!.value}`;
+  } else {
+    return func(editor, diag);
   }
 }
 
