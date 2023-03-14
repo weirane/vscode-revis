@@ -1,5 +1,32 @@
 import { inspect } from "util";
 import * as vscode from "vscode";
+//@ts-ignore
+import { createSVGWindow } from "svgdom";
+import { SVG, registerWindow, Svg } from "@svgdotjs/svg.js";
+
+export function svg2uri(svg: Svg): vscode.Uri {
+  const uri = `data:image/svg+xml;base64,${Buffer.from(svg.svg()).toString("base64")}`;
+  return vscode.Uri.parse(uri);
+}
+
+export function newSvg(width: number, height: number): Svg {
+  const window = createSVGWindow();
+  const document = window.document;
+  registerWindow(window, document);
+  return (<Svg>SVG(document.documentElement)).size(width, height);
+}
+
+export function littleTriangle(): Svg {
+  const sidelength = 9;
+  const sign = newSvg(sidelength, sidelength * 0.866);
+  sign.path(`M${sidelength / 2},0 L0,${sidelength * 0.866} l${sidelength},0`).fill("#ff3300");
+  return sign;
+}
+
+/** Generates an array of numbers in the interval [from, to) */
+export function range(from: number, to: number): ReadonlyArray<number> {
+  return [...Array(to - from).keys()].map((i) => i + from);
+}
 
 export const log = new (class {
   private enabled = true;
