@@ -114,7 +114,6 @@ function image499(
   editor: vscode.TextEditor,
   diag: vscode.Diagnostic
 ): vscode.DecorationOptions | string {
-  log.info("499", diag);
   const borrowed = /^cannot borrow `(.+)` as mutable more than once at a time/.exec(
     diag.message
   )![1];
@@ -129,10 +128,37 @@ function image499(
     return "cannot parse diagnostics";
   }
   const xshift = getXshift(editor, fromline, toline) * CONFIG.charwidth;
-  const imm = `\`${borrowed}\` borrowed mutably in this region`;
-  const mut = `\`${borrowed}\` borrowed mutably again, conflicting with the first borrow`;
-  const tip = "tip: a variable can only be mutably borrowed once at a time";
-  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip);
+  if (fromline === toline) {
+    // loop situation
+    const tipline = errorline + 1;
+    const svgimg = newSvg(800 + xshift, CONFIG.lineheight * (errorline - fromline + 2));
+    const canvas = svgimg.group().attr({
+      fill: "transparent",
+      transform: `translate(${xshift}, 0)`,
+      style: `font-family: monospace; font-size: ${CONFIG.fontsize}px; overflow: visible;`,
+    });
+    canvas.path(`M0,${0.5 * CONFIG.lineheight} l20,0`).stroke("cyan");
+    canvas
+      .plain(`\`${borrowed}\` mutably borrowed for the duration of the loop`)
+      .fill("cyan")
+      .attr({ x: 30, y: CONFIG.fontsize });
+    canvas.path(`M0,${(errorline - fromline + 0.5) * CONFIG.lineheight} l20,0`).stroke("red");
+    canvas
+      .plain(`\`${borrowed}\` mutably borrowed again`)
+      .fill("red")
+      .attr({ x: 30, y: CONFIG.fontsize + CONFIG.lineheight * (errorline - fromline) });
+    canvas
+      .text("tip: a value can only be mutably borrowed once at a time")
+      .fill("white")
+      .attr({ x: 20, y: CONFIG.fontsize + CONFIG.lineheight * (tipline - fromline) });
+    log.info("LINES", fromline, errorline, toline, svgimg.svg());
+    return image2decoration(svgimg, fromline);
+  } else {
+    const imm = `\`${borrowed}\` borrowed mutably in this region`;
+    const mut = `\`${borrowed}\` borrowed mutably again, conflicting with the first borrow`;
+    const tip = "tip: a variable can only be mutably borrowed once at a time";
+    return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip);
+  }
 }
 
 function image502(
