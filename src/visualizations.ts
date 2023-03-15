@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Svg } from "@svgdotjs/svg.js";
+import { Svg, G as Group } from "@svgdotjs/svg.js";
 import { range, log, svg2uri, newSvg } from "./util";
 import { CONFIG } from "./errorviz";
 
@@ -32,6 +32,26 @@ function image2decoration(image: Svg, line: number): vscode.DecorationOptions {
     },
     hoverMessage: new vscode.MarkdownString("click for visualization"),
   };
+}
+
+/**
+ * Draw a pointer to a line and add text at the right
+ * @param lineoffset which line do you want to annotate?
+ * @param pointeroffset where should the pointer be? (0: at the top of the line, 0.5: at the middle, 1: at the bottom)
+ */
+function pointerText(
+  canvas: Group,
+  lineoffset: number,
+  pointeroffset: number,
+  text: string,
+  color: string
+) {
+  // TODO: draw an arrow
+  canvas.path(`M0,${(lineoffset + pointeroffset) * CONFIG.lineheight} l20,0`).stroke(color);
+  canvas
+    .plain(text)
+    .fill(color)
+    .attr({ x: 30, y: CONFIG.fontsize + CONFIG.lineheight * lineoffset });
 }
 
 export function imageByCode(
@@ -90,11 +110,7 @@ function regionPointConflict(
   });
   canvas.path(`M0,0 L10,0 l0,${CONFIG.lineheight * (toline - fromline + 1)} l-10,0`).stroke("cyan");
   canvas.plain(regiontext).fill("cyan").attr({ x: 20, y: CONFIG.fontsize });
-  canvas.path(`M0,${(errorline - fromline + 0.5) * CONFIG.lineheight} l20,0`).stroke("red");
-  canvas
-    .plain(pointtext)
-    .fill("red")
-    .attr({ x: 30, y: CONFIG.fontsize + CONFIG.lineheight * (errorline - fromline) });
+  pointerText(canvas, errorline - fromline, 0.5, pointtext, "red");
   canvas
     .text(tip)
     .fill("white")
@@ -137,16 +153,14 @@ function image499(
       transform: `translate(${xshift}, 0)`,
       style: `font-family: monospace; font-size: ${CONFIG.fontsize}px; overflow: visible;`,
     });
-    canvas.path(`M0,${0.5 * CONFIG.lineheight} l20,0`).stroke("cyan");
-    canvas
-      .plain(`\`${borrowed}\` mutably borrowed for the duration of the loop`)
-      .fill("cyan")
-      .attr({ x: 30, y: CONFIG.fontsize });
-    canvas.path(`M0,${(errorline - fromline + 0.5) * CONFIG.lineheight} l20,0`).stroke("red");
-    canvas
-      .plain(`\`${borrowed}\` mutably borrowed again`)
-      .fill("red")
-      .attr({ x: 30, y: CONFIG.fontsize + CONFIG.lineheight * (errorline - fromline) });
+    pointerText(
+      canvas,
+      0,
+      0.5,
+      `\`${borrowed}\` mutably borrowed for the duration of the loop`,
+      "cyan"
+    );
+    pointerText(canvas, errorline - fromline, 0.5, `\`${borrowed}\` mutably borrowed again`, "red");
     canvas
       .text("tip: a value can only be mutably borrowed once at a time")
       .fill("white")
