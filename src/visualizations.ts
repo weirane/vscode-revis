@@ -52,6 +52,7 @@ export function imageByCode(
     (editor: vscode.TextEditor, diag: vscode.Diagnostic) => string | vscode.DecorationOptions
   > = new Map([
     ["E0382", image382],
+    ["E0499", image499],
     ["E0502", image502],
     ["E0503", image503],
     ["E0505", image505],
@@ -101,6 +102,39 @@ function regionPointConflict(
   return image2decoration(svgimg, fromline);
 }
 
+function image382(
+  editor: vscode.TextEditor,
+  diag: vscode.Diagnostic
+): vscode.DecorationOptions | string {
+  log.info("382", diag);
+  return "";
+}
+
+function image499(
+  editor: vscode.TextEditor,
+  diag: vscode.Diagnostic
+): vscode.DecorationOptions | string {
+  log.info("499", diag);
+  const borrowed = /^cannot borrow `(.+)` as mutable more than once at a time/.exec(
+    diag.message
+  )![1];
+  const errorline = diag.range.start.line;
+  const fromline = diag.relatedInformation?.filter((d) =>
+    d.message.endsWith("first mutable borrow occurs here")
+  )[0]?.location.range.start.line;
+  const toline = diag.relatedInformation?.filter((d) =>
+    d.message.endsWith("first borrow later used here")
+  )[0]?.location.range.end.line;
+  if (borrowed === undefined || fromline === undefined || toline === undefined) {
+    return "cannot parse diagnostics";
+  }
+  const xshift = getXshift(editor, fromline, toline) * CONFIG.charwidth;
+  const imm = `\`${borrowed}\` borrowed mutably in this region`;
+  const mut = `\`${borrowed}\` borrowed mutably again, conflicting with the first borrow`;
+  const tip = "tip: a variable can only be mutably borrowed once at a time";
+  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip);
+}
+
 function image502(
   editor: vscode.TextEditor,
   diag: vscode.Diagnostic
@@ -121,14 +155,6 @@ function image502(
   const mut = `\`${borrowed}\` borrowed mutably here, conflicting with the immutable borrow`;
   const tip = "tip: move the mutable borrow out of the immutable borrow area";
   return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip);
-}
-
-function image382(
-  editor: vscode.TextEditor,
-  diag: vscode.Diagnostic
-): vscode.DecorationOptions | string {
-  log.info("382", diag);
-  return "";
 }
 
 function image503(
