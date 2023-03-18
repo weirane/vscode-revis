@@ -21,13 +21,21 @@ function getXshift(editor: vscode.TextEditor, de: number, au: number): number {
   return longest - first;
 }
 
-function image2decoration(image: Svg, line: number): vscode.DecorationOptions {
+function image2decoration(darkImage: Svg, lightImage: Svg, line: number): vscode.DecorationOptions {
   return {
     range: new vscode.Range(line, 0, line, 0),
     renderOptions: {
-      after: <any>{
-        contentIconPath: svg2uri(image),
-        verticalAlign: "text-top",
+      light: {
+        after: <any>{
+          contentIconPath: svg2uri(lightImage),
+          verticalAlign: "text-top",
+        },
+      },
+      dark: {
+        after: <any>{
+          contentIconPath: svg2uri(darkImage),
+          verticalAlign: "text-top",
+        },
       },
     },
     hoverMessage: new vscode.MarkdownString("click for visualization"),
@@ -69,7 +77,11 @@ export function imageByCode(
 
   const codeFuncMap: Map<
     string,
-    (editor: vscode.TextEditor, diag: vscode.Diagnostic) => string | vscode.DecorationOptions
+    (
+      editor: vscode.TextEditor,
+      diag: vscode.Diagnostic,
+      theme: keyof typeof CONFIG.color
+    ) => string | [Svg, number]
   > = new Map([
     ["E0382", image382],
     ["E0499", image499],
@@ -84,7 +96,17 @@ export function imageByCode(
     log.info(`unsupported error code ${diag.code!.value}`);
     return `unsupported error code ${diag.code!.value}`;
   } else {
-    return func(editor, diag);
+    const darkresult = func(editor, diag, "dark");
+    if (typeof darkresult === "string") {
+      return darkresult;
+    }
+    const lightresult = func(editor, diag, "light");
+    if (typeof lightresult === "string") {
+      return lightresult;
+    }
+    const [dark, line] = darkresult;
+    const [light, _] = lightresult;
+    return image2decoration(dark, light, line);
   }
 }
 
@@ -97,8 +119,10 @@ function regionPointConflict(
   tipline: number,
   regiontext: string,
   pointtext: string,
-  tip: string
-) {
+  tip: string,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] {
+  const colortheme = CONFIG.color[theme];
   const svgimg = newSvg(
     800 + xshift,
     CONFIG.lineheight * (Math.max(toline, tipline) - fromline + 2)
@@ -108,28 +132,33 @@ function regionPointConflict(
     transform: `translate(${xshift}, 0)`,
     style: `font-family: monospace; font-size: ${CONFIG.fontsize}px; overflow: visible;`,
   });
-  canvas.path(`M0,0 L10,0 l0,${CONFIG.lineheight * (toline - fromline + 1)} l-10,0`).stroke("cyan");
-  canvas.plain(regiontext).fill("cyan").attr({ x: 20, y: CONFIG.fontsize });
-  pointerText(canvas, errorline - fromline, 0.5, pointtext, "red");
+  canvas
+    .path(`M0,0 L10,0 l0,${CONFIG.lineheight * (toline - fromline + 1)} l-10,0`)
+    .stroke(colortheme.info);
+  canvas.plain(regiontext).fill(colortheme.info).attr({ x: 20, y: CONFIG.fontsize });
+  pointerText(canvas, errorline - fromline, 0.5, pointtext, colortheme.error);
   canvas
     .text(tip)
-    .fill("white")
+    .fill(colortheme.tip)
     .attr({ x: 20, y: CONFIG.fontsize + CONFIG.lineheight * (tipline - fromline) });
-  return image2decoration(svgimg, fromline);
+  return [svgimg, fromline];
 }
 
 function image382(
   editor: vscode.TextEditor,
-  diag: vscode.Diagnostic
-): vscode.DecorationOptions | string {
+  diag: vscode.Diagnostic,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] | string {
   log.info("382", diag);
   return "";
 }
 
 function image499(
   editor: vscode.TextEditor,
-  diag: vscode.Diagnostic
-): vscode.DecorationOptions | string {
+  diag: vscode.Diagnostic,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] | string {
+  const colortheme = CONFIG.color[theme];
   const borrowed = /^cannot borrow `(.+)` as mutable more than once at a time/.exec(
     diag.message
   )![1];
@@ -158,27 +187,34 @@ function image499(
       0,
       0.5,
       `\`${borrowed}\` mutably borrowed for the duration of the loop`,
-      "cyan"
+      colortheme.info
     );
-    pointerText(canvas, errorline - fromline, 0.5, `\`${borrowed}\` mutably borrowed again`, "red");
+    pointerText(
+      canvas,
+      errorline - fromline,
+      0.5,
+      `\`${borrowed}\` mutably borrowed again`,
+      colortheme.error
+    );
     canvas
       .text("tip: a value can only be mutably borrowed once at a time")
-      .fill("white")
+      .fill(colortheme.tip)
       .attr({ x: 20, y: CONFIG.fontsize + CONFIG.lineheight * (tipline - fromline) });
     log.info("LINES", fromline, errorline, toline, svgimg.svg());
-    return image2decoration(svgimg, fromline);
+    return [svgimg, fromline];
   } else {
     const imm = `\`${borrowed}\` borrowed mutably in this region`;
     const mut = `\`${borrowed}\` borrowed mutably again, conflicting with the first borrow`;
     const tip = "tip: a variable can only be mutably borrowed once at a time";
-    return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip);
+    return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip, theme);
   }
 }
 
 function image502(
   editor: vscode.TextEditor,
-  diag: vscode.Diagnostic
-): vscode.DecorationOptions | string {
+  diag: vscode.Diagnostic,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] | string {
   const borrowed = /^cannot borrow `\*?(.+)` as mutable/.exec(diag.message)![1];
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) =>
@@ -194,13 +230,14 @@ function image502(
   const imm = `\`${borrowed}\` borrowed immutably in this region`;
   const mut = `\`${borrowed}\` borrowed mutably here, conflicting with the immutable borrow`;
   const tip = "tip: move the mutable borrow out of the immutable borrow area";
-  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip);
+  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip, theme);
 }
 
 function image503(
   editor: vscode.TextEditor,
-  diag: vscode.Diagnostic
-): vscode.DecorationOptions | string {
+  diag: vscode.Diagnostic,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] | string {
   const borrowed = /^cannot use `(.+)` because it was mutably borrowed/.exec(diag.message)![1];
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("occurs here"))[0]
@@ -215,13 +252,14 @@ function image503(
   const imm = `\`${borrowed}\` borrowed mutably in this region`;
   const mut = `\`${borrowed}\` used here, conflicting with the borrow`;
   const tip = `tip: move the use of \`${borrowed}\` out of the borrow region`;
-  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip);
+  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip, theme);
 }
 
 function image505(
   editor: vscode.TextEditor,
-  diag: vscode.Diagnostic
-): vscode.DecorationOptions | string {
+  diag: vscode.Diagnostic,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] | string {
   const borrowed = /^cannot move out of `(.+)` because it is borrowed/.exec(diag.message)![1];
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("occurs here"))[0]
@@ -239,13 +277,14 @@ function image505(
   const mut = `\`${borrowed}\` moved into ${movein}`;
   const tip =
     "tip: the move of a value should happen when it is not borrowed.\nafter the move, the value can no longer be borrowed";
-  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip);
+  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip, theme);
 }
 
 function image506(
   editor: vscode.TextEditor,
-  diag: vscode.Diagnostic
-): vscode.DecorationOptions | string {
+  diag: vscode.Diagnostic,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] | string {
   const borrowed = /^cannot assign to `(.+)` because it is borrowed/.exec(diag.message)![1];
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("occurs here"))[0]
@@ -269,14 +308,16 @@ function image506(
     toline,
     `\`${borrowed}\` borrowed in this region`,
     `\`${borrowed}\` assigned to another value`,
-    tip
+    tip,
+    theme
   );
 }
 
 function image597(
   editor: vscode.TextEditor,
-  diag: vscode.Diagnostic
-): vscode.DecorationOptions | string {
+  diag: vscode.Diagnostic,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] | string {
   const borrowed = /`(.+)` does not live long enough/.exec(diag.message)![1];
   const validfrom = diag.range.start.line;
   const validto = diag.relatedInformation?.filter((d) =>
@@ -309,6 +350,7 @@ function image597(
     lateruse + 1,
     `\`${user}\` borrows from \`${borrowed}\` and can be used in this region`,
     `\`${borrowed}\` is no longer valid, while \`${user}\` is still borrowing it`,
-    `tip: make sure \`${user}\` borrows from a valid value`
+    `tip: make sure \`${user}\` borrows from a valid value`,
+    theme
   );
 }

@@ -8,10 +8,27 @@ function newDecorationType(): vscode.TextEditorDecorationType {
   });
 }
 
+// color choices:
+//  vscode command: generate color theme from current settings
+//   error: token.error-token
+//   info: token.info-token
+//   tip: entity.name.label
 export const CONFIG = {
   fontsize: vscode.workspace.getConfiguration("editor").get<number>("fontSize") ?? 14,
   charwidth: 10,
   lineheight: 0,
+  color: {
+    light: {
+      error: "#CD3131",
+      info: "#316BCD",
+      tip: "#000000",
+    },
+    dark: {
+      error: "#F44747",
+      info: "#6796E6",
+      tip: "#C8C8C8",
+    },
+  },
 };
 CONFIG.lineheight = Math.max(8, Math.round(1.35 * CONFIG.fontsize));
 
@@ -87,7 +104,7 @@ export const G = {
     // get the diaginfo.svg in this switch block
     const img = imageByCode(editor, diag);
     if (typeof img === "string") {
-      log.error("svg generation failed");
+      log.error("svg generation failed:", img);
       return;
     }
     diaginfo.svg = img;
