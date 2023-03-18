@@ -93,6 +93,7 @@ function toggleVisualization() {
   } else {
     errorviz.G.showDiag(ontheline[0]);
   }
+  errorviz.G.showTriangles();
 }
 
 // This method is called when your extension is deactivated

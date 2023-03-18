@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { log, svg2uri, littleTriangle } from "./util";
+import { log, svg2uri, triangleAvail, triangleShown } from "./util";
 import { imageByCode } from "./visualizations";
 
 function newDecorationType(): vscode.TextEditorDecorationType {
@@ -39,25 +39,37 @@ export type DiagnosticInfo = {
   svg: vscode.DecorationOptions | null;
 };
 export const G = {
-  triangleDtype: vscode.window.createTextEditorDecorationType({
+  triangleAvailDtype: vscode.window.createTextEditorDecorationType({
     isWholeLine: true,
-    gutterIconPath: svg2uri(littleTriangle()),
+    gutterIconPath: svg2uri(triangleAvail()),
+  }),
+  triangleShownDtype: vscode.window.createTextEditorDecorationType({
+    isWholeLine: true,
+    gutterIconPath: svg2uri(triangleShown()),
   }),
   diags: new Map<string, DiagnosticInfo>(),
   showTriangles(diags: Map<string, DiagnosticInfo> | null = null) {
     if (diags === null) {
       diags = this.diags;
     }
-    const ranges = Array.from(diags.keys()).map((k) => {
-      const line = parseInt(k);
-      return new vscode.Range(line, 0, line, 0);
-    });
     const editor = vscode.window.activeTextEditor;
     if (editor === undefined) {
       log.error("no editor");
       return;
     }
-    editor.setDecorations(this.triangleDtype, ranges);
+    const showns: vscode.Range[] = [];
+    const avails: vscode.Range[] = [];
+    for (const [k, v] of diags) {
+      const line = parseInt(k);
+      const range = new vscode.Range(line, 0, line, 0);
+      if (v.displayed) {
+        showns.push(range);
+      } else {
+        avails.push(range);
+      }
+    }
+    editor.setDecorations(this.triangleShownDtype, showns);
+    editor.setDecorations(this.triangleAvailDtype, avails);
   },
   hideDiag(idx: string, diags: Map<string, DiagnosticInfo> | null = null) {
     if (diags === null) {

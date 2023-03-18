@@ -16,10 +16,24 @@ export function newSvg(width: number, height: number): Svg {
   return (<Svg>SVG(document.documentElement)).size(width, height);
 }
 
-export function littleTriangle(): Svg {
-  const sidelength = 9;
-  const sign = newSvg(sidelength, sidelength * 0.866);
-  sign.path(`M${sidelength / 2},0 L0,${sidelength * 0.866} l${sidelength},0`).fill("#ff3300");
+const TRIANGLE_SIDE_LEN = 9;
+/**
+ * Triangle for hidden visualization. Pointing up.
+ */
+export function triangleAvail(): Svg {
+  const SL = TRIANGLE_SIDE_LEN;
+  const sign = newSvg(SL, SL);
+  sign.path(`M${SL / 2},0 L0,${SL} l${SL},0`).fill("#ff3300");
+  return sign;
+}
+
+/**
+ * Triangle for shown visualization. Pointing right.
+ */
+export function triangleShown(): Svg {
+  const SL = TRIANGLE_SIDE_LEN;
+  const sign = newSvg(SL, SL);
+  sign.path(`M0,0 L${SL},${SL / 2} L0,${SL}`).fill("#ff3300");
   return sign;
 }
 
