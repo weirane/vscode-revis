@@ -10,7 +10,18 @@ export function activate(context: vscode.ExtensionContext) {
       e.uris.map((u) => u.toString())
     );
   });
-  context.subscriptions.push(vscode.workspace.onDidSaveTextDocument(saveDiagnostics));
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((doc: vscode.TextDocument) => {
+      if (doc.languageId !== "rust") {
+        // only supports rust
+        return;
+      }
+      // wait for rust-analyzer diagnostics to be ready
+      setTimeout(() => {
+        saveDiagnostics(doc);
+      }, 300);
+    })
+  );
   context.subscriptions.push(
     vscode.commands.registerCommand(
       "errorviz.toggleVisualization",
@@ -21,10 +32,6 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function saveDiagnostics(doc: vscode.TextDocument) {
-  if (doc.languageId !== "rust") {
-    // only supports rust
-    return;
-  }
   const diagnostics = languages
     .getDiagnostics(doc.uri)
     .filter((d) => d.severity === vscode.DiagnosticSeverity.Error);
