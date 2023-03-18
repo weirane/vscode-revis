@@ -34,14 +34,11 @@ export function activate(context: vscode.ExtensionContext) {
 function saveDiagnostics(doc: vscode.TextDocument) {
   const diagnostics = languages
     .getDiagnostics(doc.uri)
-    .filter((d) => d.severity === vscode.DiagnosticSeverity.Error);
+    // only support _rust_ _errors_
+    .filter((d) => d.source === "rustc" && d.severity === vscode.DiagnosticSeverity.Error);
   const newdiags = new Map<string, errorviz.DiagnosticInfo>();
   const torefresh: string[] = [];
   for (const diag of diagnostics) {
-    if (diag.source !== "rustc") {
-      // only supports rust errors
-      continue;
-    }
     if (diag.code === undefined || typeof diag.code === "number" || typeof diag.code === "string") {
       log.error("unexpected diag.code type", typeof diag.code);
       return;
