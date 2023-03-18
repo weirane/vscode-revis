@@ -27,8 +27,7 @@ function saveDiagnostics(doc: vscode.TextDocument) {
   }
   const diagnostics = languages
     .getDiagnostics(doc.uri)
-    // TODO: hack to extract main errors (not related info)
-    .filter((d) => (<any>d)?.data !== undefined);
+    .filter((d) => d.severity === vscode.DiagnosticSeverity.Error);
   const newdiags = new Map<string, errorviz.DiagnosticInfo>();
   const torefresh: string[] = [];
   for (const diag of diagnostics) {
