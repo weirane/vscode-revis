@@ -90,6 +90,7 @@ export function imageByCode(
       theme: keyof typeof CONFIG.color
     ) => string | [Svg, number]
   > = new Map([
+    ["E0373", image373],
     ["E0382", image382],
     ["E0499", image499],
     ["E0502", image502],
@@ -153,6 +154,43 @@ function regionPointConflict(
     .fill(colortheme.tip)
     .attr({ x: 20, y: fontsize + lineheight * (tipline - fromline) });
   return [svgimg, fromline];
+}
+
+function image373(
+  editor: vscode.TextEditor,
+  diag: vscode.Diagnostic,
+  theme: keyof typeof CONFIG.color
+): [Svg, number] | string {
+  const colortheme = CONFIG.color[theme];
+  const { fontsize, lineheight, charwidth, arrowsize } = CONFIG;
+  const borrowed = /^closure may outlive the current function, but it borrows `(.+)`,/.exec(
+    diag.message
+  )![1];
+  const line = diag.range.start.line;
+  const xshift = getXshift(editor, line, line + 2) * charwidth;
+  const svgimg = newSvg(800 + xshift, 2 * lineheight);
+  const canvas = svgimg.group().attr({
+    fill: "transparent",
+    transform: `translate(${xshift}, 0)`,
+    style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
+  });
+  canvas
+    .path(
+      `M0,${lineheight / 2} l10,0 l0,${lineheight * 1.5}
+       l${-arrowsize / 2},${-arrowsize}
+       m${arrowsize / 2},${arrowsize}
+       l${arrowsize / 2},${-arrowsize}`
+    )
+    .stroke(colortheme.error);
+  canvas
+    .text(`the closure borrows \`${borrowed}\`, which only lives in the current function`)
+    .fill(colortheme.info)
+    .attr({ x: 20, y: fontsize });
+  canvas
+    .text(`but the closure needs to live after the function returns`)
+    .fill(colortheme.error)
+    .attr({ x: 20, y: fontsize + lineheight });
+  return [svgimg, line];
 }
 
 function image382(
