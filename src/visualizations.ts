@@ -54,12 +54,19 @@ function pointerText(
   text: string,
   color: string
 ) {
-  // TODO: draw an arrow
-  canvas.path(`M0,${(lineoffset + pointeroffset) * CONFIG.lineheight} l20,0`).stroke(color);
+  const { fontsize, lineheight, arrowsize } = CONFIG;
+  canvas
+    .path(
+      `M0,${(lineoffset + pointeroffset) * lineheight} l20,0
+      l${-arrowsize},${-arrowsize / 2}
+      m${arrowsize},${arrowsize / 2}
+      l${-arrowsize},${arrowsize / 2}`
+    )
+    .stroke(color);
   canvas
     .plain(text)
     .fill(color)
-    .attr({ x: 30, y: CONFIG.fontsize + CONFIG.lineheight * lineoffset });
+    .attr({ x: 30, y: fontsize + lineheight * lineoffset });
 }
 
 export function imageByCode(
@@ -122,25 +129,29 @@ function regionPointConflict(
   tip: string,
   theme: keyof typeof CONFIG.color
 ): [Svg, number] {
+  const { fontsize, lineheight, arrowsize } = CONFIG;
   const colortheme = CONFIG.color[theme];
-  const svgimg = newSvg(
-    800 + xshift,
-    CONFIG.lineheight * (Math.max(toline, tipline) - fromline + 2)
-  );
+  const svgimg = newSvg(800 + xshift, lineheight * (Math.max(toline, tipline) - fromline + 2));
   const canvas = svgimg.group().attr({
     fill: "transparent",
     transform: `translate(${xshift}, 0)`,
-    style: `font-family: monospace; font-size: ${CONFIG.fontsize}px; overflow: visible;`,
+    style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
   });
   canvas
-    .path(`M0,0 L10,0 l0,${CONFIG.lineheight * (toline - fromline + 1)} l-10,0`)
+    .path(
+      `M0,0 L10,0 l0,${lineheight * (toline - fromline + 1)} l-10,0
+       M10,${lineheight / 2}l10,0
+       l${-arrowsize},${-arrowsize / 2}
+       m${arrowsize},${arrowsize / 2}
+       l${-arrowsize},${arrowsize / 2}`
+    )
     .stroke(colortheme.info);
-  canvas.plain(regiontext).fill(colortheme.info).attr({ x: 20, y: CONFIG.fontsize });
+  canvas.plain(regiontext).fill(colortheme.info).attr({ x: 30, y: fontsize });
   pointerText(canvas, errorline - fromline, 0.5, pointtext, colortheme.error);
   canvas
     .text(tip)
     .fill(colortheme.tip)
-    .attr({ x: 20, y: CONFIG.fontsize + CONFIG.lineheight * (tipline - fromline) });
+    .attr({ x: 20, y: fontsize + lineheight * (tipline - fromline) });
   return [svgimg, fromline];
 }
 

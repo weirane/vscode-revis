@@ -17,6 +17,7 @@ export const CONFIG = {
   fontsize: vscode.workspace.getConfiguration("editor").get<number>("fontSize") ?? 14,
   charwidth: 10,
   lineheight: 0,
+  arrowsize: 6,
   color: {
     light: {
       error: "#CD3131",
