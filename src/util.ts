@@ -18,19 +18,19 @@ export function newSvg(width: number, height: number): Svg {
 
 const TRIANGLE_SIDE_LEN = 9;
 /**
- * Triangle for hidden visualization. Pointing up.
+ * Triangle for Shown visualization. Pointing down.
  */
-export function triangleAvail(): Svg {
+export function triangleShown(): Svg {
   const SL = TRIANGLE_SIDE_LEN;
   const sign = newSvg(SL, SL);
-  sign.path(`M${SL / 2},0 L0,${SL} l${SL},0`).fill("#ff3300");
+  sign.path(`M0,0 L${SL},0 L${SL / 2},${SL}`).fill("#ff3300");
   return sign;
 }
 
 /**
- * Triangle for shown visualization. Pointing right.
+ * Triangle for hidden visualization. Pointing right.
  */
-export function triangleShown(): Svg {
+export function triangleAvail(): Svg {
   const SL = TRIANGLE_SIDE_LEN;
   const sign = newSvg(SL, SL);
   sign.path(`M0,0 L${SL},${SL / 2} L0,${SL}`).fill("#ff3300");

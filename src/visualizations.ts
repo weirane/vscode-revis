@@ -200,7 +200,6 @@ function image499(
       .text("tip: a value can only be mutably borrowed once at a time")
       .fill(colortheme.tip)
       .attr({ x: 20, y: CONFIG.fontsize + CONFIG.lineheight * (tipline - fromline) });
-    log.info("LINES", fromline, errorline, toline, svgimg.svg());
     return [svgimg, fromline];
   } else {
     const imm = `\`${borrowed}\` borrowed mutably in this region`;
