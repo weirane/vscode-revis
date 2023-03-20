@@ -56,8 +56,11 @@ function saveDiagnostics(doc: vscode.TextDocument) {
       torefresh.push(erridx);
     }
   }
+  // hide old diags and refresh displayed diagnostics
+  for (const id of errorviz.G.diags.keys()) {
+    errorviz.G.hideDiag(id);
+  }
   for (const d of torefresh) {
-    errorviz.G.hideDiag(d);
     errorviz.G.showDiag(d, newdiags);
   }
   errorviz.G.diags = newdiags;
