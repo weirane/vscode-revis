@@ -12,6 +12,7 @@ function newDecorationType(): vscode.TextEditorDecorationType {
 //  vscode command: generate color theme from current settings
 //   error: token.error-token
 //   info: token.info-token
+//   info2: token.debug-token
 //   tip: entity.name.label
 export const CONFIG = {
   fontsize: vscode.workspace.getConfiguration("editor").get<number>("fontSize") ?? 14,
@@ -22,11 +23,13 @@ export const CONFIG = {
     light: {
       error: "#CD3131",
       info: "#316BCD",
+      info2: "#800080",
       tip: "#000000",
     },
     dark: {
       error: "#F44747",
       info: "#6796E6",
+      info2: "#B267E6",
       tip: "#C8C8C8",
     },
   },

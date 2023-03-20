@@ -129,7 +129,7 @@ function regionPointConflict(
   pointtext: string,
   tip: string,
   theme: keyof typeof CONFIG.color
-): [Svg, number] {
+): [Svg, number, Group] {
   const { fontsize, lineheight, arrowsize } = CONFIG;
   const colortheme = CONFIG.color[theme];
   const svgimg = newSvg(800 + xshift, lineheight * (Math.max(toline, tipline) - fromline + 2));
@@ -147,13 +147,13 @@ function regionPointConflict(
        l${-arrowsize},${arrowsize / 2}`
     )
     .stroke(colortheme.info);
-  canvas.plain(regiontext).fill(colortheme.info).attr({ x: 30, y: fontsize });
+  canvas.text(regiontext).fill(colortheme.info).attr({ x: 30, y: fontsize });
   pointerText(canvas, errorline - fromline, 0.5, pointtext, colortheme.error);
   canvas
     .text(tip)
     .fill(colortheme.tip)
     .attr({ x: 20, y: fontsize + lineheight * (tipline - fromline) });
-  return [svgimg, fromline];
+  return [svgimg, fromline, canvas];
 }
 
 function image373(
@@ -198,8 +198,37 @@ function image382(
   diag: vscode.Diagnostic,
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
-  log.info("382", diag);
-  return "";
+  const colortheme = CONFIG.color[theme];
+  const moved = /: `(.+)`\n/.exec(diag.message)![1];
+  const errorline = diag.range.start.line;
+  const defineline = diag.relatedInformation?.filter((d) =>
+    d.message.startsWith("move occurs because `")
+  )[0]?.location.range.start.line;
+  const moveline = diag.relatedInformation?.filter((d) => d.message.endsWith("value moved here"))[0]
+    ?.location.range.start.line;
+  if (defineline === undefined || moveline === undefined) {
+    return "cannot parse diagnostics";
+  }
+  const xshift = getXshift(editor, defineline, errorline) * CONFIG.charwidth;
+  const [svgimg, line, canvas] = regionPointConflict(
+    xshift,
+    defineline,
+    moveline,
+    errorline,
+    errorline + 1,
+    `lifetime of \`${moved}\``,
+    `use of \`${moved}\` after being moved`,
+    "tip: value cannot be used after moved",
+    theme
+  );
+  pointerText(
+    canvas,
+    moveline - defineline,
+    0.5,
+    `\`${moved}\` moved to another variable`,
+    colortheme.info2
+  );
+  return [svgimg, line];
 }
 
 function image499(
@@ -254,7 +283,18 @@ function image499(
     const imm = `\`${borrowed}\` borrowed mutably in this region`;
     const mut = `\`${borrowed}\` borrowed mutably again, conflicting with the first borrow`;
     const tip = "tip: a variable can only be mutably borrowed once at a time";
-    return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip, theme);
+    const [s, li, _] = regionPointConflict(
+      xshift,
+      fromline,
+      toline,
+      errorline,
+      toline,
+      imm,
+      mut,
+      tip,
+      theme
+    );
+    return [s, li];
   }
 }
 
@@ -278,7 +318,18 @@ function image502(
   const imm = `\`${borrowed}\` borrowed immutably in this region`;
   const mut = `\`${borrowed}\` borrowed mutably here, conflicting with the immutable borrow`;
   const tip = "tip: move the mutable borrow out of the immutable borrow area";
-  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip, theme);
+  const [s, li, _] = regionPointConflict(
+    xshift,
+    fromline,
+    toline,
+    errorline,
+    toline,
+    imm,
+    mut,
+    tip,
+    theme
+  );
+  return [s, li];
 }
 
 function image503(
@@ -300,7 +351,18 @@ function image503(
   const imm = `\`${borrowed}\` borrowed mutably in this region`;
   const mut = `\`${borrowed}\` used here, conflicting with the borrow`;
   const tip = `tip: move the use of \`${borrowed}\` out of the borrow region`;
-  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip, theme);
+  const [s, li, _] = regionPointConflict(
+    xshift,
+    fromline,
+    toline,
+    errorline,
+    toline,
+    imm,
+    mut,
+    tip,
+    theme
+  );
+  return [s, li];
 }
 
 function image505(
@@ -325,7 +387,18 @@ function image505(
   const mut = `\`${borrowed}\` moved into ${movein}`;
   const tip =
     "tip: the move of a value should happen when it is not borrowed.\nafter the move, the value can no longer be borrowed";
-  return regionPointConflict(xshift, fromline, toline, errorline, toline, imm, mut, tip, theme);
+  const [s, li, _] = regionPointConflict(
+    xshift,
+    fromline,
+    toline,
+    errorline,
+    toline,
+    imm,
+    mut,
+    tip,
+    theme
+  );
+  return [s, li];
 }
 
 function image506(
@@ -348,7 +421,7 @@ function image506(
   const xshift = getXshift(editor, fromline, toline) * CONFIG.charwidth;
   const mut = `\`${borrowed}\` moved into ${movein}`;
   const tip = "tip: when a variable is borrowed by another variable, it cannot be reassigned";
-  return regionPointConflict(
+  const [s, li, _] = regionPointConflict(
     xshift,
     fromline,
     toline,
@@ -359,6 +432,7 @@ function image506(
     tip,
     theme
   );
+  return [s, li];
 }
 
 function image597(
@@ -390,7 +464,7 @@ function image597(
     return "cannot parse diagnostics";
   }
   const xshift = getXshift(editor, validfrom, lateruse) * CONFIG.charwidth;
-  return regionPointConflict(
+  const [s, li, _] = regionPointConflict(
     xshift,
     validfrom,
     validto,
@@ -401,4 +475,5 @@ function image597(
     `tip: make sure \`${user}\` borrows from a valid value`,
     theme
   );
+  return [s, li];
 }
