@@ -56,13 +56,12 @@ function saveDiagnostics(doc: vscode.TextDocument) {
       torefresh.push(erridx);
     }
   }
-  errorviz.G.showTriangles(newdiags);
   for (const d of torefresh) {
     errorviz.G.hideDiag(d);
     errorviz.G.showDiag(d, newdiags);
   }
   errorviz.G.diags = newdiags;
-  // TODO: refresh diagnostics
+  errorviz.G.showTriangles();
 }
 
 function toggleVisualization() {
