@@ -303,7 +303,13 @@ function image502(
   diag: vscode.Diagnostic,
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
-  const borrowed = /^cannot borrow `\*?(.+)` as mutable/.exec(diag.message)![1];
+  const borrowednull = /^cannot borrow `\*?(.+)` as (im)?mutable/.exec(diag.message);
+  if (borrowednull === null) {
+    return "cannot parse diagnostics";
+  }
+  const borrowed = borrowednull[1];
+  // whether the error point is immutable.
+  const isimm = borrowednull[2] === "im";
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) =>
     d.message.endsWith("borrow occurs here")
@@ -312,20 +318,24 @@ function image502(
     d.message.endsWith("borrow later used here")
   )[0]?.location.range.end.line;
   if (borrowed === undefined || fromline === undefined || toline === undefined) {
-    return "cannot parse diagnostics";
+    return "cannot parse related diagnostics";
   }
   const xshift = getXshift(editor, fromline, toline) * CONFIG.charwidth;
-  const imm = `\`${borrowed}\` borrowed immutably in this region`;
-  const mut = `\`${borrowed}\` borrowed mutably here, conflicting with the immutable borrow`;
-  const tip = "tip: move the mutable borrow out of the immutable borrow area";
+  const region = `\`${borrowed}\` borrowed ${isimm ? "" : "im"}mutably in this region`;
+  const point =
+    `\`${borrowed}\` borrowed ${isimm ? "im" : ""}mutably here, ` +
+    `conflicting with the previous borrow`;
+  const tip =
+    `tip: move the ${isimm ? "im" : ""}mutable borrow ` +
+    `out of the ${isimm ? "" : "im"}mutable borrow area`;
   const [s, li, _] = regionPointConflict(
     xshift,
     fromline,
     toline,
     errorline,
     toline,
-    imm,
-    mut,
+    region,
+    point,
     tip,
     theme
   );
