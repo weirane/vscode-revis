@@ -1,22 +1,24 @@
 {
   "name": "errorviz",
+  "publisher": "weirane",
   "displayName": "errorviz",
   "repository": {
     "type": "git",
     "url": "https://github.com/weirane/vscode-errorviz"
   },
-  "description": "",
-  "version": "0.0.1",
+  "description": "Visualize lifetime-related Rust compiler errors",
+  "version": "0.0.1-alpha",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.73.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages"
   ],
   "activationEvents": [
     "onLanguage:rust"
   ],
-  "main": "./out/main.js",
+  "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
@@ -32,7 +34,7 @@
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
     "vscode:prepublish": "npm run esbuild-base -- --minify",
-    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/main.js --external:vscode --format=cjs --platform=node",
+    "esbuild-base": "esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
     "esbuild": "npm run esbuild-base -- --sourcemap",
     "esbuild-watch": "npm run esbuild-base -- --sourcemap --watch",
     "test-compile": "tsc -p ./"
