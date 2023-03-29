@@ -45,11 +45,14 @@ function image2decoration(darkImage: Svg, lightImage: Svg, line: number): vscode
 /**
  * Draw a pointer to a line and add text at the right
  * @param lineoffset which line do you want to annotate?
+ * @param textoffset which line do you want to put the text?
  * @param pointeroffset where should the pointer be? (0: at the top of the line, 0.5: at the middle, 1: at the bottom)
  */
 function pointerText(
   canvas: Group,
+  baseline: number,
   lineoffset: number,
+  textoffset: number,
   pointeroffset: number,
   text: string,
   color: string
@@ -57,7 +60,8 @@ function pointerText(
   const { fontsize, lineheight, arrowsize } = CONFIG;
   canvas
     .path(
-      `M0,${(lineoffset + pointeroffset) * lineheight} l20,0
+      `M0,${(lineoffset - baseline + pointeroffset) * lineheight} l15,0
+      l0,${(textoffset - lineoffset) * lineheight} l10,0
       l${-arrowsize},${-arrowsize / 2}
       m${arrowsize},${arrowsize / 2}
       l${-arrowsize},${arrowsize / 2}`
@@ -66,7 +70,36 @@ function pointerText(
   canvas
     .plain(text)
     .fill(color)
-    .attr({ x: 30, y: fontsize + lineheight * lineoffset });
+    .attr({ x: 30, y: fontsize + lineheight * (textoffset - baseline) });
+}
+
+/**
+ * Draw a pointer to a region and add text at the right
+ * @param lineoffset which line do you want to put the arrow and the text?
+ * @param options fromopen: whether to draw horizontal line at regionfrom
+ */
+function regionText(
+  canvas: Group,
+  baseline: number,
+  regionfrom: number,
+  regionto: number,
+  lineoffset: number,
+  text: string,
+  color: string,
+  options: { fromopen?: boolean; toopen?: boolean } = {}
+) {
+  const { lineheight, fontsize, arrowsize } = CONFIG;
+  canvas
+    .path(
+      `M0,${(regionfrom - baseline) * lineheight} ${options.fromopen ? "m" : "l"}10,0
+       l0,${lineheight * (regionto - regionfrom + 1)} ${options.toopen ? "m" : "l"}-10,0
+       M10,${(0.5 + lineoffset - baseline) * lineheight}l10,0
+       l${-arrowsize},${-arrowsize / 2}
+       m${arrowsize},${arrowsize / 2}
+       l${-arrowsize},${arrowsize / 2}`
+    )
+    .stroke(color);
+  canvas.text(text).fill(color).attr({ x: 30, y: fontsize });
 }
 
 export const codeFuncMap: Map<
@@ -132,29 +165,31 @@ function regionPointConflict(
   theme: keyof typeof CONFIG.color
 ): [Svg, number, Group] {
   const { fontsize, lineheight, arrowsize } = CONFIG;
+  const imgfrom = Math.min(fromline, toline, errorline, tipline);
+  const imgto = Math.max(fromline, toline, errorline, tipline);
   const colortheme = CONFIG.color[theme];
-  const svgimg = newSvg(800 + xshift, lineheight * (Math.max(toline, tipline) - fromline + 2));
+  const svgimg = newSvg(800 + xshift, lineheight * (imgto - imgfrom + 2));
   const canvas = svgimg.group().attr({
     fill: "transparent",
     transform: `translate(${xshift}, 0)`,
     style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
   });
-  canvas
-    .path(
-      `M0,0 L10,0 l0,${lineheight * (toline - fromline + 1)} l-10,0
-       M10,${lineheight / 2}l10,0
-       l${-arrowsize},${-arrowsize / 2}
-       m${arrowsize},${arrowsize / 2}
-       l${-arrowsize},${arrowsize / 2}`
-    )
-    .stroke(colortheme.info);
-  canvas.text(regiontext).fill(colortheme.info).attr({ x: 30, y: fontsize });
-  pointerText(canvas, errorline - fromline, 0.5, pointtext, colortheme.error);
+  // TODO: optimize placing algo
+  let errorTextLine = errorline;
+  if (errorTextLine === fromline) {
+    if (toline - fromline > 0) {
+      errorTextLine++;
+    } else {
+      log.warn("no where to put error text");
+    }
+  }
+  regionText(canvas, imgfrom, fromline, toline, fromline, regiontext, colortheme.info);
+  pointerText(canvas, imgfrom, errorline, errorTextLine, 0.5, pointtext, colortheme.error);
   canvas
     .text(tip)
     .fill(colortheme.tip)
-    .attr({ x: 20, y: fontsize + lineheight * (tipline - fromline) });
-  return [svgimg, fromline, canvas];
+    .attr({ x: 20, y: fontsize + lineheight * (tipline - imgfrom) });
+  return [svgimg, imgfrom, canvas];
 }
 
 function image373(
@@ -221,10 +256,20 @@ function image382(
       transform: `translate(${xshift}, 0)`,
       style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
     });
-    pointerText(canvas, 0, 0.5, `end of \`${moved}\`'s lifetime when it is moved`, colortheme.info);
     pointerText(
       canvas,
-      errorline - moveline,
+      moveline,
+      moveline,
+      moveline,
+      0.5,
+      `end of \`${moved}\`'s lifetime when it is moved`,
+      colortheme.info
+    );
+    pointerText(
+      canvas,
+      moveline,
+      errorline,
+      errorline,
       0.5,
       `use of \`${moved}\` after being moved`,
       colortheme.error
@@ -249,7 +294,9 @@ function image382(
   );
   pointerText(
     canvas,
-    moveline - defineline,
+    defineline,
+    moveline,
+    moveline,
     0.5,
     `\`${moved}\` moved to another variable`,
     colortheme.info2
@@ -288,14 +335,18 @@ function image499(
     });
     pointerText(
       canvas,
-      0,
+      fromline,
+      fromline,
+      fromline,
       0.5,
       `\`${borrowed}\` mutably borrowed for the duration of the loop`,
       colortheme.info
     );
     pointerText(
       canvas,
-      errorline - fromline,
+      fromline,
+      errorline,
+      errorline,
       0.5,
       `\`${borrowed}\` mutably borrowed again`,
       colortheme.error
