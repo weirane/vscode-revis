@@ -198,6 +198,7 @@ function image382(
   diag: vscode.Diagnostic,
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
+  const { charwidth, lineheight, fontsize } = CONFIG;
   const colortheme = CONFIG.color[theme];
   const moved = /: `(.+)`\n/.exec(diag.message)![1];
   const errorline = diag.range.start.line;
@@ -206,8 +207,32 @@ function image382(
   )[0]?.location.range.start.line;
   const moveline = diag.relatedInformation?.filter((d) => d.message.endsWith("value moved here"))[0]
     ?.location.range.start.line;
-  if (defineline === undefined || moveline === undefined) {
+  if (moveline === undefined) {
     return "cannot parse diagnostics";
+  }
+  if (defineline === undefined) {
+    // no diagnostics information on defined location
+    const line = moveline;
+    const xshift = getXshift(editor, line, errorline + 2) * charwidth;
+    const svgimg = newSvg(800 + xshift, (errorline - line + 2) * lineheight);
+    const canvas = svgimg.group().attr({
+      fill: "transparent",
+      transform: `translate(${xshift}, 0)`,
+      style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
+    });
+    pointerText(canvas, 0, 0.5, `end of \`${moved}\`'s lifetime when it is moved`, colortheme.info);
+    pointerText(
+      canvas,
+      errorline - moveline,
+      0.5,
+      `use of \`${moved}\` after being moved`,
+      colortheme.error
+    );
+    canvas
+      .text("tip: value cannot be used after being moved")
+      .fill(colortheme.tip)
+      .attr({ x: 20, y: CONFIG.fontsize + CONFIG.lineheight * (errorline - moveline + 1) });
+    return [svgimg, line];
   }
   const xshift = getXshift(editor, defineline, errorline) * CONFIG.charwidth;
   const [svgimg, line, canvas] = regionPointConflict(
@@ -218,7 +243,7 @@ function image382(
     errorline + 1,
     `lifetime of \`${moved}\``,
     `use of \`${moved}\` after being moved`,
-    "tip: value cannot be used after moved",
+    "tip: value cannot be used after being moved",
     theme
   );
   pointerText(
@@ -391,10 +416,10 @@ function image505(
     return "cannot parse diagnostics";
   }
   // TODO: parse movein
-  const movein = "something";
+  const movein = "";
   const xshift = getXshift(editor, fromline, toline) * CONFIG.charwidth;
   const imm = `\`${borrowed}\` borrowed in this region`;
-  const mut = `\`${borrowed}\` moved into ${movein}`;
+  const mut = `\`${borrowed}\` moved${movein}`;
   const tip =
     "tip: the move of a value should happen when it is not borrowed.\nafter the move, the value can no longer be borrowed";
   const [s, li, _] = regionPointConflict(
