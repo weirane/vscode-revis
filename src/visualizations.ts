@@ -69,6 +69,24 @@ function pointerText(
     .attr({ x: 30, y: fontsize + lineheight * lineoffset });
 }
 
+export const codeFuncMap: Map<
+  string,
+  (
+    editor: vscode.TextEditor,
+    diag: vscode.Diagnostic,
+    theme: keyof typeof CONFIG.color
+  ) => string | [Svg, number]
+> = new Map([
+  ["E0373", image373],
+  ["E0382", image382],
+  ["E0499", image499],
+  ["E0502", image502],
+  ["E0503", image503],
+  ["E0505", image505],
+  ["E0506", image506],
+  ["E0597", image597],
+]);
+
 export function imageByCode(
   editor: vscode.TextEditor,
   diag: vscode.Diagnostic
@@ -82,23 +100,6 @@ export function imageByCode(
     return "unexpected diag.code type";
   }
 
-  const codeFuncMap: Map<
-    string,
-    (
-      editor: vscode.TextEditor,
-      diag: vscode.Diagnostic,
-      theme: keyof typeof CONFIG.color
-    ) => string | [Svg, number]
-  > = new Map([
-    ["E0373", image373],
-    ["E0382", image382],
-    ["E0499", image499],
-    ["E0502", image502],
-    ["E0503", image503],
-    ["E0505", image505],
-    ["E0506", image506],
-    ["E0597", image597],
-  ]);
   const func = codeFuncMap.get(diag.code!.value);
   if (func === undefined) {
     log.info(`unsupported error code ${diag.code!.value}`);

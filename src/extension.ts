@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { languages } from "vscode";
 import * as errorviz from "./errorviz";
 import { log } from "./util";
+import { codeFuncMap } from "./visualizations";
 
 export function activate(context: vscode.ExtensionContext) {
   languages.onDidChangeDiagnostics((e: vscode.DiagnosticChangeEvent) => {
@@ -34,8 +35,16 @@ export function activate(context: vscode.ExtensionContext) {
 function saveDiagnostics(doc: vscode.TextDocument) {
   const diagnostics = languages
     .getDiagnostics(doc.uri)
-    // only support _rust_ _errors_
-    .filter((d) => d.source === "rustc" && d.severity === vscode.DiagnosticSeverity.Error);
+    // only include _supported_ _rust_ _errors_
+    .filter((d) => {
+      return (
+        d.source === "rustc" &&
+        d.severity === vscode.DiagnosticSeverity.Error &&
+        typeof d.code === "object" &&
+        typeof d.code.value === "string" &&
+        codeFuncMap.has(d.code.value)
+      );
+    });
   const newdiags = new Map<string, errorviz.DiagnosticInfo>();
   const torefresh: string[] = [];
   for (const diag of diagnostics) {
