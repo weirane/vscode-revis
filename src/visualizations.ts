@@ -42,6 +42,17 @@ function image2decoration(darkImage: Svg, lightImage: Svg, line: number): vscode
   };
 }
 
+function svgWithCanvas(xshift: number, height: number): [Svg, Group] {
+  const { lineheight, fontsize } = CONFIG;
+  const svgimg = newSvg(800 + xshift, lineheight * height);
+  const canvas = svgimg.group().attr({
+    fill: "transparent",
+    transform: `translate(${xshift}, 0)`,
+    style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
+  });
+  return [svgimg, canvas];
+}
+
 /**
  * Draw a pointer to a line and add text at the right
  * @param lineoffset which line do you want to annotate?
@@ -168,12 +179,7 @@ function regionPointConflict(
   const imgfrom = Math.min(fromline, toline, errorline, tipline);
   const imgto = Math.max(fromline, toline, errorline, tipline);
   const colortheme = CONFIG.color[theme];
-  const svgimg = newSvg(800 + xshift, lineheight * (imgto - imgfrom + 2));
-  const canvas = svgimg.group().attr({
-    fill: "transparent",
-    transform: `translate(${xshift}, 0)`,
-    style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
-  });
+  const [svgimg, canvas] = svgWithCanvas(xshift, imgto - imgfrom + 2);
   // TODO: optimize placing algo
   let errorTextLine = errorline;
   if (errorTextLine === fromline) {
@@ -204,12 +210,7 @@ function image373(
   )![1];
   const line = diag.range.start.line;
   const xshift = getXshift(editor, line, line + 2) * charwidth;
-  const svgimg = newSvg(800 + xshift, 2 * lineheight);
-  const canvas = svgimg.group().attr({
-    fill: "transparent",
-    transform: `translate(${xshift}, 0)`,
-    style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
-  });
+  const [svgimg, canvas] = svgWithCanvas(xshift, 2);
   canvas
     .path(
       `M0,${lineheight / 2} l10,0 l0,${lineheight * 1.5}
@@ -250,12 +251,7 @@ function image382(
     // no diagnostics information on defined location
     const line = moveline;
     const xshift = getXshift(editor, line, errorline + 2) * charwidth;
-    const svgimg = newSvg(800 + xshift, (errorline - line + 2) * lineheight);
-    const canvas = svgimg.group().attr({
-      fill: "transparent",
-      transform: `translate(${xshift}, 0)`,
-      style: `font-family: monospace; font-size: ${fontsize}px; overflow: visible;`,
-    });
+    const [svgimg, canvas] = svgWithCanvas(xshift, errorline - line + 2);
     pointerText(
       canvas,
       moveline,
@@ -327,12 +323,7 @@ function image499(
   if (fromline === toline) {
     // loop situation
     const tipline = errorline + 1;
-    const svgimg = newSvg(800 + xshift, CONFIG.lineheight * (errorline - fromline + 2));
-    const canvas = svgimg.group().attr({
-      fill: "transparent",
-      transform: `translate(${xshift}, 0)`,
-      style: `font-family: monospace; font-size: ${CONFIG.fontsize}px; overflow: visible;`,
-    });
+    const [svgimg, canvas] = svgWithCanvas(xshift, errorline - fromline + 2);
     pointerText(
       canvas,
       fromline,
