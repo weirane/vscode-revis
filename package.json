@@ -24,6 +24,20 @@
       {
         "command": "errorviz.toggleVisualization",
         "title": "errorviz: Toggle Visualization"
+      },
+      {
+        "command": "errorviz.clearAllVisualizations",
+        "title": "errorviz: Clear All Visualizations"
+      }
+    ],
+    "keybindings": [
+      {
+        "key": "ctrl+e ctrl+v",
+        "command": "errorviz.toggleVisualization"
+      },
+      {
+        "key": "ctrl+e ctrl+c",
+        "command": "errorviz.clearAllVisualizations"
       }
     ]
   },

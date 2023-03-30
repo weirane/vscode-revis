@@ -11,7 +11,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (editor === undefined) {
         return;
       }
-      saveDiagnostics(editor.document);
+      saveDiagnostics(editor);
     })
   );
   // context.subscriptions.push(
@@ -27,19 +27,22 @@ export function activate(context: vscode.ExtensionContext) {
       if (e === undefined) {
         return;
       }
-      saveDiagnostics(e.document);
+      saveDiagnostics(e);
     })
   );
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "errorviz.toggleVisualization",
-      toggleVisualization,
-      "Toggle Visualization"
+    vscode.commands.registerTextEditorCommand("errorviz.toggleVisualization", toggleVisualization)
+  );
+  context.subscriptions.push(
+    vscode.commands.registerTextEditorCommand(
+      "errorviz.clearAllVisualizations",
+      clearAllVisualizations
     )
   );
 }
 
-function saveDiagnostics(doc: vscode.TextDocument) {
+function saveDiagnostics(editor: vscode.TextEditor) {
+  const doc = editor.document;
   if (doc.languageId !== "rust") {
     // only supports rust
     return;
@@ -84,15 +87,10 @@ function saveDiagnostics(doc: vscode.TextDocument) {
     errorviz.G.showDiag(d, newdiags);
   }
   errorviz.G.diags = newdiags;
-  errorviz.G.showTriangles();
+  errorviz.G.showTriangles(editor);
 }
 
-function toggleVisualization() {
-  const editor = vscode.window.activeTextEditor;
-  if (editor === undefined) {
-    log.error("no editor");
-    return;
-  }
+function toggleVisualization(editor: vscode.TextEditor, _: vscode.TextEditorEdit) {
   const currline = editor.selection.active.line;
   const lines = [...errorviz.G.diags.keys()];
   const ontheline = lines.filter((i) => parseInt(i) === currline);
@@ -115,7 +113,11 @@ function toggleVisualization() {
   } else {
     errorviz.G.showDiag(ontheline[0]);
   }
-  errorviz.G.showTriangles();
+  errorviz.G.showTriangles(editor);
+}
+
+function clearAllVisualizations(e: vscode.TextEditor, _: vscode.TextEditorEdit) {
+  errorviz.G.hideAllDiags(e);
 }
 
 // This method is called when your extension is deactivated

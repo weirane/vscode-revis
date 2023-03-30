@@ -52,14 +52,9 @@ export const G = {
     gutterIconPath: svg2uri(triangleShown()),
   }),
   diags: new Map<string, DiagnosticInfo>(),
-  showTriangles(diags: Map<string, DiagnosticInfo> | null = null) {
+  showTriangles(editor: vscode.TextEditor, diags: Map<string, DiagnosticInfo> | null = null) {
     if (diags === null) {
       diags = this.diags;
-    }
-    const editor = vscode.window.activeTextEditor;
-    if (editor === undefined) {
-      log.error("no editor");
-      return;
     }
     const showns: vscode.Range[] = [];
     const avails: vscode.Range[] = [];
@@ -74,6 +69,16 @@ export const G = {
     }
     editor.setDecorations(this.triangleShownDtype, showns);
     editor.setDecorations(this.triangleAvailDtype, avails);
+  },
+  hideTriangles(editor: vscode.TextEditor) {
+    editor.setDecorations(this.triangleShownDtype, []);
+    editor.setDecorations(this.triangleAvailDtype, []);
+  },
+  hideAllDiags(editor: vscode.TextEditor) {
+    for (const d of this.diags.keys()) {
+      this.hideDiag(d);
+    }
+    this.showTriangles(editor);
   },
   hideDiag(idx: string, diags: Map<string, DiagnosticInfo> | null = null) {
     if (diags === null) {
