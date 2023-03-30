@@ -5,22 +5,29 @@ import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 
 export function activate(context: vscode.ExtensionContext) {
-  languages.onDidChangeDiagnostics((e: vscode.DiagnosticChangeEvent) => {
-    log.info(
-      "diag change",
-      e.uris.map((u) => u.toString())
-    );
-  });
   context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument((doc: vscode.TextDocument) => {
-      if (doc.languageId !== "rust") {
-        // only supports rust
+    languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor === undefined) {
         return;
       }
-      // wait for rust-analyzer diagnostics to be ready
-      setTimeout(() => {
-        saveDiagnostics(doc);
-      }, 300);
+      saveDiagnostics(editor.document);
+    })
+  );
+  // context.subscriptions.push(
+  //   vscode.workspace.onDidSaveTextDocument((doc: vscode.TextDocument) => {
+  //     // wait for rust-analyzer diagnostics to be ready
+  //     setTimeout(() => {
+  //       saveDiagnostics(doc);
+  //     }, 300);
+  //   })
+  // );
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor((e) => {
+      if (e === undefined) {
+        return;
+      }
+      saveDiagnostics(e.document);
     })
   );
   context.subscriptions.push(
@@ -33,6 +40,10 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function saveDiagnostics(doc: vscode.TextDocument) {
+  if (doc.languageId !== "rust") {
+    // only supports rust
+    return;
+  }
   const diagnostics = languages
     .getDiagnostics(doc.uri)
     // only include _supported_ _rust_ _errors_
