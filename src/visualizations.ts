@@ -72,7 +72,7 @@ function pointerText(
   canvas
     .path(
       `M0,${(lineoffset - baseline + pointeroffset) * lineheight} l15,0
-      l0,${(textoffset - lineoffset) * lineheight} l10,0
+      l0,${(textoffset - lineoffset - pointeroffset + 0.5) * lineheight} l10,0
       l${-arrowsize},${-arrowsize / 2}
       m${arrowsize},${arrowsize / 2}
       l${-arrowsize},${arrowsize / 2}`
@@ -293,7 +293,7 @@ function image382(
     defineline,
     moveline,
     moveline,
-    0.5,
+    1,
     `\`${moved}\` moved to another variable`,
     colortheme.info2
   );
