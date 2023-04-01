@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { Svg, G as Group } from "@svgdotjs/svg.js";
-import { range, log, svg2uri, newSvg } from "./util";
+import { range, log, svg2uri, newSvg, minmax } from "./util";
 import { CONFIG } from "./errorviz";
 
 /**
@@ -176,8 +176,7 @@ function regionPointConflict(
   theme: keyof typeof CONFIG.color
 ): [Svg, number, Group] {
   const { fontsize, lineheight, arrowsize } = CONFIG;
-  const imgfrom = Math.min(fromline, toline, errorline, tipline);
-  const imgto = Math.max(fromline, toline, errorline, tipline);
+  const [imgfrom, imgto] = minmax(fromline, toline, errorline, tipline);
   const colortheme = CONFIG.color[theme];
   const [svgimg, canvas] = svgWithCanvas(xshift, imgto - imgfrom + 2);
   // TODO: optimize placing algo

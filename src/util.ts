@@ -16,6 +16,12 @@ export function newSvg(width: number, height: number): Svg {
   return (<Svg>SVG(document.documentElement)).size(width, height);
 }
 
+export function minmax(...args: number[]): [number, number] {
+  const min = Math.min(...args);
+  const max = Math.max(...args);
+  return [min, max];
+}
+
 const TRIANGLE_SIDE_LEN = 9;
 /**
  * Triangle for Shown visualization. Pointing down.
