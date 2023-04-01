@@ -553,6 +553,7 @@ function image597(
   diag: vscode.Diagnostic,
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
+  const colortheme = CONFIG.color[theme];
   const borrowed = /`(.+)` does not live long enough/.exec(diag.message)![1];
   const validfrom = diag.range.start.line;
   const validto = diag.relatedInformation?.filter((d) =>
@@ -561,32 +562,89 @@ function image597(
   const lateruseObj = diag.relatedInformation?.filter((d) =>
     d.message.endsWith("borrow later used here")
   )[0];
-  if (lateruseObj === undefined) {
-    return "cannot parse diagnostics";
-  }
-  // get the name of the borrower
-  if (lateruseObj.location.range.end.line !== lateruseObj.location.range.start.line) {
-    log.warn("user crossed multiple lines");
-  }
-  const lateruse = lateruseObj.location.range.end.line;
-  const line = editor.document.lineAt(lateruse).text;
-  const userfrom = lateruseObj.location.range.start.character;
-  const userto = lateruseObj.location.range.end.character;
-  const user = line.slice(userfrom, userto);
+  const laterMightUse = diag.relatedInformation?.filter((d) =>
+    d.message.startsWith("borrow might be used here,")
+  )[0];
+  const shouldStatic = diag.relatedInformation?.filter((d) =>
+    d.message.endsWith(" is borrowed for `'static`")
+  )[0]?.location.range.end.line;
   if (borrowed === undefined || validfrom === undefined || validto === undefined) {
     return "cannot parse diagnostics";
   }
-  const xshift = getXshift(editor, validfrom, lateruse) * CONFIG.charwidth;
-  const [s, li, _] = regionPointConflict(
-    xshift,
-    validfrom,
-    validto,
-    lateruse,
-    lateruse + 1,
-    `\`${user}\` borrows from \`${borrowed}\` and can be used in this region`,
-    `\`${borrowed}\` is no longer valid, while \`${user}\` is still borrowing it`,
-    `tip: make sure \`${user}\` borrows from a valid value`,
-    theme
-  );
-  return [s, li];
+  if (lateruseObj !== undefined) {
+    if (lateruseObj.location.range.end.line !== lateruseObj.location.range.start.line) {
+      log.warn("user crossed multiple lines");
+    }
+    const lateruse = lateruseObj.location.range.end.line;
+    // get the name of the borrower
+    const line = editor.document.lineAt(lateruse).text;
+    const userfrom = lateruseObj.location.range.start.character;
+    const userto = lateruseObj.location.range.end.character;
+    const user = line.slice(userfrom, userto);
+    const xshift = getXshift(editor, validfrom, lateruse) * CONFIG.charwidth;
+    const [s, li, _] = regionPointConflict(
+      xshift,
+      validfrom,
+      validto,
+      lateruse,
+      lateruse + 1,
+      `\`${user}\` borrows from \`${borrowed}\` and can only be used in this region`,
+      `\`${borrowed}\` is no longer valid, while \`${user}\` is still borrowing it`,
+      `tip: make sure \`${user}\` borrows from a valid value`,
+      theme
+    );
+    return [s, li];
+  } else if (laterMightUse !== undefined) {
+    const mightuse = laterMightUse.location.range.start.line;
+    const xshift = getXshift(editor, validfrom, mightuse) * CONFIG.charwidth;
+    const [imgfrom, imgto] = minmax(validfrom, validto, mightuse, mightuse + 1);
+    const [svgimg, canvas] = svgWithCanvas(xshift, imgto - imgfrom + 2);
+    regionText(
+      canvas,
+      validfrom,
+      validfrom,
+      validto,
+      validto,
+      `\`${borrowed}\` can be used until this point`,
+      colortheme.info,
+      { textarrow: false, fromopen: true, fromarrow: true }
+    );
+    pointerText(
+      canvas,
+      validfrom,
+      mightuse,
+      mightuse,
+      0.5,
+      laterMightUse.message,
+      colortheme.error
+    );
+    return [svgimg, imgfrom];
+  } else if (shouldStatic !== undefined) {
+    // should be static
+    const [line, lineto] = minmax(shouldStatic, validfrom, validto);
+    const xshift = getXshift(editor, validfrom, validto) * CONFIG.charwidth;
+    const [svgimg, canvas] = svgWithCanvas(xshift, lineto - line + 2);
+    pointerText(
+      canvas,
+      line,
+      validto,
+      validto,
+      0.5,
+      `lifetime of \`${borrowed}\` ends here`,
+      colortheme.info
+    );
+    pointerText(
+      canvas,
+      line,
+      shouldStatic,
+      shouldStatic,
+      0.5,
+      `\`${borrowed}\` is required to have static lifetime`,
+      colortheme.error
+    );
+    return [svgimg, line];
+  } else {
+    // no user and no 'static
+    return "cannot parse diagnostics";
+  }
 }
