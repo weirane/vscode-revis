@@ -97,20 +97,56 @@ function regionText(
   lineoffset: number,
   text: string,
   color: string,
-  options: { fromopen?: boolean; toopen?: boolean } = {}
+  options: {
+    textarrow?: boolean;
+    fromopen?: boolean;
+    fromarrow?: boolean;
+    toopen?: boolean;
+    toarrow?: boolean;
+  } = { textarrow: true }
 ) {
   const { lineheight, fontsize, arrowsize } = CONFIG;
   canvas
     .path(
       `M0,${(regionfrom - baseline) * lineheight} ${options.fromopen ? "m" : "l"}10,0
-       l0,${lineheight * (regionto - regionfrom + 1)} ${options.toopen ? "m" : "l"}-10,0
-       M10,${(0.5 + lineoffset - baseline) * lineheight}l10,0
-       l${-arrowsize},${-arrowsize / 2}
-       m${arrowsize},${arrowsize / 2}
-       l${-arrowsize},${arrowsize / 2}`
+       l0,${lineheight * (regionto - regionfrom + 1)} ${options.toopen ? "m" : "l"}-10,0`
     )
     .stroke(color);
-  canvas.text(text).fill(color).attr({ x: 30, y: fontsize });
+  if (options.textarrow) {
+    canvas
+      .path(
+        `M10,${(0.5 + lineoffset - baseline) * lineheight}l10,0
+         l${-arrowsize},${-arrowsize / 2}
+         m${arrowsize},${arrowsize / 2}
+         l${-arrowsize},${arrowsize / 2}`
+      )
+      .stroke(color);
+  }
+  if (options.fromopen && options.fromarrow) {
+    canvas
+      .path(
+        `M10,${(regionfrom - baseline) * lineheight}
+       l${-arrowsize / 2},${arrowsize}
+       m${arrowsize / 2},${-arrowsize}
+       l${arrowsize / 2},${arrowsize}`
+      )
+      .stroke(color);
+  }
+  if (options.toopen && options.toarrow) {
+    canvas
+      .path(
+        `M10,${(regionto - baseline) * lineheight}
+       l${-arrowsize / 2},${-arrowsize}
+       m${arrowsize / 2},${arrowsize}
+       l${arrowsize / 2},${-arrowsize}`
+      )
+      .stroke(color);
+  }
+  const textx = options.textarrow ? 30 : 20;
+  canvas
+    .text(text)
+    .fill(color)
+    .attr({ x: textx, y: fontsize + lineheight * (lineoffset - baseline) });
 }
 
 export const codeFuncMap: Map<
