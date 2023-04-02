@@ -5,6 +5,14 @@ import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 
 export function activate(context: vscode.ExtensionContext) {
+  const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
+  const useRustcErrorCode = raconfig.get<boolean>("diagnostics.useRustcErrorCode");
+  if (!useRustcErrorCode) {
+    vscode.window.showWarningMessage(
+      "Please set `rust-analyzer.diagnostics.useRustcErrorCode` to true in settings.json."
+    );
+  }
+
   context.subscriptions.push(
     languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
       const editor = vscode.window.activeTextEditor;
