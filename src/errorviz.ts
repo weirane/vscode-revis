@@ -113,7 +113,9 @@ export const G = {
     const diag = diaginfo.diagnostics;
     const img = imageByCode(editor, diag);
     if (typeof img === "string") {
-      log.error("svg generation failed:", img);
+      const msg = "svg generation failed: " + img;
+      log.error(msg);
+      vscode.window.showErrorMessage(msg);
       return;
     }
     diaginfo.svg = img;
