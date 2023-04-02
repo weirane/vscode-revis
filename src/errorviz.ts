@@ -16,7 +16,7 @@ function newDecorationType(): vscode.TextEditorDecorationType {
 //   tip: entity.name.label
 export const CONFIG = {
   fontsize: vscode.workspace.getConfiguration("editor").get<number>("fontSize") ?? 14,
-  charwidth: 10,
+  charwidth: 9,
   lineheight: 0,
   arrowsize: 6,
   color: {
@@ -107,13 +107,15 @@ export const G = {
     }
     const diaginfo = diags.get(erridx);
     if (diaginfo === undefined) {
-      log.error(`diags pour ${erridx} n'existe pas`);
+      const msg = `diags for ${erridx} does not exist`;
+      log.error(msg);
+      vscode.window.showErrorMessage(msg);
       return;
     }
     const diag = diaginfo.diagnostics;
     const img = imageByCode(editor, diag);
     if (typeof img === "string") {
-      const msg = "svg generation failed: " + img;
+      const msg = "SVG generation failed: " + img;
       log.error(msg);
       vscode.window.showErrorMessage(msg);
       return;
