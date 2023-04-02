@@ -122,25 +122,31 @@ function regionText(
       )
       .stroke(color);
   }
-  if (options.fromopen && options.fromarrow) {
-    canvas
-      .path(
-        `M10,${(regionfrom - baseline) * lineheight}
-       l${-arrowsize / 2},${arrowsize}
-       m${arrowsize / 2},${-arrowsize}
-       l${arrowsize / 2},${arrowsize}`
-      )
-      .stroke(color);
+  const arrowleft = `
+    l${arrowsize},${-arrowsize / 2}
+    m${-arrowsize},${arrowsize / 2}
+    l${arrowsize},${arrowsize / 2}`;
+  const arrowup = `
+    l${-arrowsize / 2},${arrowsize}
+    m${arrowsize / 2},${-arrowsize}
+    l${arrowsize / 2},${arrowsize}`;
+  const arrowdown = `
+    l${-arrowsize / 2},${-arrowsize}
+    m${arrowsize / 2},${arrowsize}
+    l${arrowsize / 2},${-arrowsize}`;
+  if (options.fromarrow) {
+    if (options.fromopen) {
+      canvas.path(`M10,${(regionfrom - baseline) * lineheight} ${arrowup}`).stroke(color);
+    } else {
+      canvas.path(`M0,${(regionfrom - baseline) * lineheight} ${arrowleft}`).stroke(color);
+    }
   }
-  if (options.toopen && options.toarrow) {
-    canvas
-      .path(
-        `M10,${(regionto - baseline) * lineheight}
-       l${-arrowsize / 2},${-arrowsize}
-       m${arrowsize / 2},${arrowsize}
-       l${arrowsize / 2},${-arrowsize}`
-      )
-      .stroke(color);
+  if (options.toarrow) {
+    if (options.toopen) {
+      canvas.path(`M10,${(regionto + 1 - baseline) * lineheight} ${arrowdown}`).stroke(color);
+    } else {
+      canvas.path(`M0,${(regionto + 1 - baseline) * lineheight} ${arrowleft}`).stroke(color);
+    }
   }
   const textx = options.textarrow ? 30 : 20;
   canvas
@@ -605,9 +611,9 @@ function image597(
       validfrom,
       validto,
       validto,
-      `\`${borrowed}\` can be used until this point`,
+      `\`${borrowed}\` can only be used until this point`,
       colortheme.info,
-      { textarrow: false, fromopen: true, fromarrow: true }
+      { textarrow: false, fromopen: true, toarrow: true }
     );
     pointerText(
       canvas,
