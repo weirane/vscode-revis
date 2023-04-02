@@ -186,10 +186,10 @@ export function imageByCode(
     return "unexpected diag.code type";
   }
 
-  const func = codeFuncMap.get(diag.code!.value);
+  const func = codeFuncMap.get(diag.code.value);
   if (func === undefined) {
-    log.info(`unsupported error code ${diag.code!.value}`);
-    return `unsupported error code ${diag.code!.value}`;
+    log.error(`unsupported error code ${diag.code.value}`);
+    return `unsupported error code ${diag.code.value}`;
   } else {
     const darkresult = func(editor, diag, "dark");
     if (typeof darkresult === "string") {
@@ -217,7 +217,7 @@ function regionPointConflict(
   tip: string,
   theme: keyof typeof CONFIG.color
 ): [Svg, number, Group] {
-  const { fontsize, lineheight, arrowsize } = CONFIG;
+  const { fontsize, lineheight } = CONFIG;
   const [imgfrom, imgto] = minmax(fromline, toline, errorline, tipline);
   const colortheme = CONFIG.color[theme];
   const [svgimg, canvas] = svgWithCanvas(xshift, imgto - imgfrom + 2);
@@ -246,9 +246,9 @@ function image373(
 ): [Svg, number] | string {
   const colortheme = CONFIG.color[theme];
   const { fontsize, lineheight, charwidth, arrowsize } = CONFIG;
-  const borrowed = /^closure may outlive the current function, but it borrows `(.+)`,/.exec(
+  const borrowed = (/^closure may outlive the current function, but it borrows `(.+)`,/.exec(
     diag.message
-  )![1];
+  ) ?? [])[1];
   const line = diag.range.start.line;
   const xshift = getXshift(editor, line, line + 2) * charwidth;
   const [svgimg, canvas] = svgWithCanvas(xshift, 2);
@@ -278,7 +278,7 @@ function image382(
 ): [Svg, number] | string {
   const { charwidth, lineheight, fontsize } = CONFIG;
   const colortheme = CONFIG.color[theme];
-  const moved = /: `(.+)`\n/.exec(diag.message)![1];
+  const moved = (/: `(.+)`\n/.exec(diag.message) ?? [])[1];
   const errorline = diag.range.start.line;
   const defineline = diag.relatedInformation?.filter((d) =>
     d.message.startsWith("move occurs because `")
@@ -347,9 +347,9 @@ function image499(
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
   const colortheme = CONFIG.color[theme];
-  const borrowed = /^cannot borrow `(.+)` as mutable more than once at a time/.exec(
+  const borrowed = (/^cannot borrow `(.+)` as mutable more than once at a time/.exec(
     diag.message
-  )![1];
+  ) ?? [])[1];
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) =>
     d.message.endsWith("first mutable borrow occurs here")
@@ -456,7 +456,8 @@ function image503(
   diag: vscode.Diagnostic,
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
-  const borrowed = /^cannot use `(.+)` because it was mutably borrowed/.exec(diag.message)![1];
+  const borrowed = (/^cannot use `(.+)` because it was mutably borrowed/.exec(diag.message) ??
+    [])[1];
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("occurs here"))[0]
     ?.location.range.start.line;
@@ -489,7 +490,8 @@ function image505(
   diag: vscode.Diagnostic,
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
-  const borrowed = /^cannot move out of `(.+)` because it is borrowed/.exec(diag.message)![1];
+  const borrowed = (/^cannot move out of `(.+)` because it is borrowed/.exec(diag.message) ??
+    [])[1];
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("occurs here"))[0]
     ?.location.range.start.line;
@@ -525,7 +527,7 @@ function image506(
   diag: vscode.Diagnostic,
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
-  const borrowed = /^cannot assign to `(.+)` because it is borrowed/.exec(diag.message)![1];
+  const borrowed = (/^cannot assign to `(.+)` because it is borrowed/.exec(diag.message) ?? [])[1];
   const errorline = diag.range.start.line;
   const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("occurs here"))[0]
     ?.location.range.start.line;
@@ -560,7 +562,7 @@ function image597(
   theme: keyof typeof CONFIG.color
 ): [Svg, number] | string {
   const colortheme = CONFIG.color[theme];
-  const borrowed = /`(.+)` does not live long enough/.exec(diag.message)![1];
+  const borrowed = (/`(.+)` does not live long enough/.exec(diag.message) ?? [])[1];
   const validfrom = diag.range.start.line;
   const validto = diag.relatedInformation?.filter((d) =>
     d.message.endsWith("dropped here while still borrowed")
