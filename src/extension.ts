@@ -81,10 +81,10 @@ function saveDiagnostics(editor: vscode.TextEditor) {
   }
   // hide old diags and refresh displayed diagnostics
   for (const id of errorviz.G.diags.keys()) {
-    errorviz.G.hideDiag(id);
+    errorviz.G.hideDiag(editor, id);
   }
   for (const d of torefresh) {
-    errorviz.G.showDiag(d, newdiags);
+    errorviz.G.showDiag(editor, d, newdiags);
   }
   errorviz.G.diags = newdiags;
   errorviz.G.showTriangles(editor);
@@ -109,9 +109,9 @@ function toggleVisualization(editor: vscode.TextEditor, _: vscode.TextEditorEdit
     return;
   }
   if (totoggle.displayed) {
-    errorviz.G.hideDiag(ontheline[0]);
+    errorviz.G.hideDiag(editor, ontheline[0]);
   } else {
-    errorviz.G.showDiag(ontheline[0]);
+    errorviz.G.showDiag(editor, ontheline[0]);
   }
   errorviz.G.showTriangles(editor);
 }

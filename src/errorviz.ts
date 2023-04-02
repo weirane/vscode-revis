@@ -76,26 +76,20 @@ export const G = {
   },
   hideAllDiags(editor: vscode.TextEditor) {
     for (const d of this.diags.keys()) {
-      this.hideDiag(d);
+      this.hideDiag(editor, d);
     }
     this.showTriangles(editor);
   },
-  hideDiag(idx: string, diags: Map<string, DiagnosticInfo> | null = null) {
+  hideDiag(
+    editor: vscode.TextEditor,
+    idx: string,
+    diags: Map<string, DiagnosticInfo> | null = null
+  ) {
     if (diags === null) {
       diags = this.diags;
     }
-    const editor = vscode.window.activeTextEditor;
-    if (editor === undefined) {
-      log.error("no editor");
-      return;
-    }
     const diaginfo = diags.get(idx);
     if (diaginfo === undefined) {
-      return;
-    }
-    const diag = diaginfo.diagnostics;
-    if (typeof diag.code === "number" || typeof diag.code === "string") {
-      log.error("unexpected diag.code type");
       return;
     }
     if (diaginfo.dectype !== null) {
@@ -103,14 +97,13 @@ export const G = {
     }
     diaginfo.displayed = false;
   },
-  showDiag(erridx: string, diags: Map<string, DiagnosticInfo> | null = null) {
+  showDiag(
+    editor: vscode.TextEditor,
+    erridx: string,
+    diags: Map<string, DiagnosticInfo> | null = null
+  ) {
     if (diags === null) {
       diags = this.diags;
-    }
-    const editor = vscode.window.activeTextEditor;
-    if (editor === undefined) {
-      log.error("no editor");
-      return;
     }
     const diaginfo = diags.get(erridx);
     if (diaginfo === undefined) {
@@ -118,11 +111,6 @@ export const G = {
       return;
     }
     const diag = diaginfo.diagnostics;
-    if (typeof diag.code === "number" || typeof diag.code === "string") {
-      log.error("unexpected diag.code type");
-      return;
-    }
-    // get the diaginfo.svg in this switch block
     const img = imageByCode(editor, diag);
     if (typeof img === "string") {
       log.error("svg generation failed:", img);
