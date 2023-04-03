@@ -128,6 +128,8 @@ export const G = {
     if (diags === null) {
       diags = this.diags;
     }
+    // TODO: workaround to avoid overlapping visualizations
+    this.hideAllDiags(editor, diags);
     const diaginfo = diags.get(erridx);
     if (diaginfo === undefined) {
       const msg = `diags for ${erridx} does not exist`;
