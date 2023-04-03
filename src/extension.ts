@@ -13,23 +13,27 @@ export function activate(context: vscode.ExtensionContext) {
     );
   }
 
+  // context.subscriptions.push(
+  //   languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
+  //     const editor = vscode.window.activeTextEditor;
+  //     if (editor === undefined) {
+  //       return;
+  //     }
+  //     saveDiagnostics(editor);
+  //   })
+  // );
   context.subscriptions.push(
-    languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
+    vscode.workspace.onDidSaveTextDocument((_: vscode.TextDocument) => {
       const editor = vscode.window.activeTextEditor;
       if (editor === undefined) {
         return;
       }
-      saveDiagnostics(editor);
+      // wait for rust-analyzer diagnostics to be ready
+      setTimeout(() => {
+        saveDiagnostics(editor);
+      }, 300);
     })
   );
-  // context.subscriptions.push(
-  //   vscode.workspace.onDidSaveTextDocument((doc: vscode.TextDocument) => {
-  //     // wait for rust-analyzer diagnostics to be ready
-  //     setTimeout(() => {
-  //       saveDiagnostics(doc);
-  //     }, 300);
-  //   })
-  // );
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((e) => {
       if (e === undefined) {
