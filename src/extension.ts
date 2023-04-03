@@ -103,25 +103,28 @@ function toggleVisualization(editor: vscode.TextEditor, _: vscode.TextEditorEdit
   const lines = [...errorviz.G.diags.keys()];
   const ontheline = lines.filter((i) => parseInt(i) === currline);
   if (!ontheline) {
-    log.info("nothing to toggle");
+    log.info("no diagnostics on line", currline + 1);
     return;
   }
   if (ontheline.length > 1) {
-    // TODO: use quick picks https://code.visualstudio.com/api/ux-guidelines/quick-picks
-    log.error(`too many errors on line ${ontheline}`);
-    return;
-  }
-  const totoggle = errorviz.G.diags.get(ontheline[0]);
-  if (totoggle === undefined) {
-    log.info("nothing to toggle");
-    return;
-  }
-  if (totoggle.displayed) {
-    errorviz.G.hideDiag(editor, ontheline[0]);
+    vscode.window
+      .showQuickPick(
+        ontheline.map((id) => {
+          const diag = errorviz.G.diags.get(id);
+          const [line, ecode] = id.split("_", 2);
+          const label = `${ecode} on line ${parseInt(line) + 1}`;
+          const detail = diag?.diagnostics.message;
+          return { label, detail, id };
+        })
+      )
+      .then((selected) => {
+        if (selected !== undefined) {
+          errorviz.G.toggleDiag(editor, selected.id);
+        }
+      });
   } else {
-    errorviz.G.showDiag(editor, ontheline[0]);
+    errorviz.G.toggleDiag(editor, ontheline[0]);
   }
-  errorviz.G.showTriangles(editor);
 }
 
 function clearAllVisualizations(e: vscode.TextEditor, _: vscode.TextEditorEdit) {

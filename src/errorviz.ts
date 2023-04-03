@@ -80,6 +80,26 @@ export const G = {
     }
     this.showTriangles(editor);
   },
+  toggleDiag(
+    editor: vscode.TextEditor,
+    idx: string,
+    diags: Map<string, DiagnosticInfo> | null = null
+  ) {
+    if (diags === null) {
+      diags = this.diags;
+    }
+    const totoggle = diags.get(idx);
+    if (totoggle === undefined) {
+      log.info("nothing to toggle");
+      return;
+    }
+    if (totoggle.displayed) {
+      this.hideDiag(editor, idx);
+    } else {
+      this.showDiag(editor, idx);
+    }
+    this.showTriangles(editor);
+  },
   hideDiag(
     editor: vscode.TextEditor,
     idx: string,
