@@ -74,11 +74,14 @@ export const G = {
     editor.setDecorations(this.triangleShownDtype, []);
     editor.setDecorations(this.triangleAvailDtype, []);
   },
-  hideAllDiags(editor: vscode.TextEditor) {
-    for (const d of this.diags.keys()) {
-      this.hideDiag(editor, d);
+  hideAllDiags(editor: vscode.TextEditor, diags: Map<string, DiagnosticInfo> | null = null) {
+    if (diags === null) {
+      diags = this.diags;
     }
-    this.showTriangles(editor);
+    for (const d of diags.keys()) {
+      this.hideDiag(editor, d, diags);
+    }
+    this.showTriangles(editor, diags);
   },
   toggleDiag(
     editor: vscode.TextEditor,

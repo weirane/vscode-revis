@@ -88,13 +88,12 @@ function saveDiagnostics(editor: vscode.TextEditor) {
     }
   }
   // hide old diags and refresh displayed diagnostics
-  for (const id of errorviz.G.diags.keys()) {
-    errorviz.G.hideDiag(editor, id);
-  }
-  for (const d of torefresh) {
-    errorviz.G.showDiag(editor, d, newdiags);
-  }
+  errorviz.G.hideAllDiags(editor);
   errorviz.G.diags = newdiags;
+  for (const d of torefresh) {
+    log.info("reshow", d);
+    errorviz.G.showDiag(editor, d);
+  }
   errorviz.G.showTriangles(editor);
 }
 
