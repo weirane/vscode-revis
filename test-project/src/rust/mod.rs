@@ -1,0 +1,6 @@
+mod bindings_after_at_or_patterns_slice_patterns_box_patterns;
+mod region_ends_after_if_condition;
+mod borrowck_field_sensitivity;
+mod send_is_not_static_std_sync;
+mod patterns;
+mod range_2;
