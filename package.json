@@ -32,14 +32,9 @@
     ],
     "keybindings": [
       {
-        "key": "ctrl+e ctrl+v",
-        "mac": "cmd+e cmd+v",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
         "command": "errorviz.toggleVisualization"
-      },
-      {
-        "key": "ctrl+e ctrl+c",
-        "mac": "cmd+e cmd+c",
-        "command": "errorviz.clearAllVisualizations"
       }
     ]
   },
