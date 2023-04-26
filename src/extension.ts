@@ -4,6 +4,7 @@ import * as errorviz from "./errorviz";
 import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 
+let intervalHandle: number | null = null;
 export function activate(context: vscode.ExtensionContext) {
   const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
   const useRustcErrorCode = raconfig.get<boolean>("diagnostics.useRustcErrorCode");
@@ -22,18 +23,25 @@ export function activate(context: vscode.ExtensionContext) {
   //     saveDiagnostics(editor);
   //   })
   // );
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument((_: vscode.TextDocument) => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor === undefined) {
-        return;
-      }
-      // wait for rust-analyzer diagnostics to be ready
-      setTimeout(() => {
-        saveDiagnostics(editor);
-      }, 300);
-    })
-  );
+  intervalHandle = setInterval((_: vscode.TextDocument) => {
+    const editor = vscode.window.activeTextEditor;
+    if (editor === undefined) {
+      return;
+    }
+    saveDiagnostics(editor);
+  }, 1000);
+  // context.subscriptions.push(
+  //   vscode.workspace.onDidSaveTextDocument((_: vscode.TextDocument) => {
+  //     const editor = vscode.window.activeTextEditor;
+  //     if (editor === undefined) {
+  //       return;
+  //     }
+  //     // wait for rust-analyzer diagnostics to be ready
+  //     setTimeout(() => {
+  //       saveDiagnostics(editor);
+  //     }, 300);
+  //   })
+  // );
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((e) => {
       if (e === undefined) {
@@ -135,4 +143,8 @@ function clearAllVisualizations(e: vscode.TextEditor, _: vscode.TextEditorEdit) 
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+  if (intervalHandle) {
+    clearInterval(intervalHandle);
+  }
+}
