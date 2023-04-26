@@ -17,9 +17,17 @@ export function activate(context: vscode.ExtensionContext) {
   const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
   const useRustcErrorCode = raconfig.get<boolean>("diagnostics.useRustcErrorCode");
   if (!useRustcErrorCode) {
-    vscode.window.showWarningMessage(
-      "Please set `rust-analyzer.diagnostics.useRustcErrorCode` to true in settings.json."
-    );
+    vscode.window
+      .showWarningMessage(
+        "errorviz wants to set `rust-analyzer.diagnostics.useRustcErrorCode` to true in settings.json.",
+        "Allow",
+        "I'll do it myself"
+      )
+      .then((sel) => {
+        if (sel === "Allow") {
+          raconfig.update("diagnostics.useRustcErrorCode", true);
+        }
+      });
   }
 
   // context.subscriptions.push(

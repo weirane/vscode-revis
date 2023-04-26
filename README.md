@@ -12,6 +12,9 @@ Install the VSCode extension [rust-analyzer][] and add the following to `setting
 ```
 "rust-analyzer.diagnostics.useRustcErrorCode": true
 ```
+The configuration can be automatically set when you use the extension for the first time.
+Just click "Allow" when the warning prompt appears.
+The configuration will be added to `.vscode/settings.json` under the project root.
 
 [rust-analyzer]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer
 
