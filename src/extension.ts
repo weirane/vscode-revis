@@ -3,9 +3,17 @@ import { languages } from "vscode";
 import * as errorviz from "./errorviz";
 import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
+import * as fs from "fs";
 
+const VERSION = "0.0.4";
 let intervalHandle: number | null = null;
 export function activate(context: vscode.ExtensionContext) {
+  if (!vscode.workspace.workspaceFolders) {
+    log.error("no workspace folders");
+    return;
+  }
+  const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
+  fs.writeFileSync(dir + "/.errorviz-version", VERSION);
   const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
   const useRustcErrorCode = raconfig.get<boolean>("diagnostics.useRustcErrorCode");
   if (!useRustcErrorCode) {

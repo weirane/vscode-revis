@@ -7,7 +7,7 @@
     "url": "https://github.com/weirane/vscode-errorviz"
   },
   "description": "Visualize lifetime-related Rust compiler errors",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "MIT",
   "engines": {
     "vscode": "^1.73.0"
