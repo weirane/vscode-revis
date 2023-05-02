@@ -459,7 +459,7 @@ function image503(
   const borrowed = (/^cannot use `(.+)` because it was mutably borrowed/.exec(diag.message) ??
     [])[1];
   const errorline = diag.range.start.line;
-  const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("occurs here"))[0]
+  const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("is borrowed here"))[0]
     ?.location.range.start.line;
   const toline = diag.relatedInformation?.filter((d) =>
     d.message.endsWith("borrow later used here")
@@ -529,8 +529,9 @@ function image506(
 ): [Svg, number] | string {
   const borrowed = (/^cannot assign to `(.+)` because it is borrowed/.exec(diag.message) ?? [])[1];
   const errorline = diag.range.start.line;
-  const fromline = diag.relatedInformation?.filter((d) => d.message.endsWith("occurs here"))[0]
-    ?.location.range.start.line;
+  const fromline = diag.relatedInformation?.filter(
+    (d) => d.message.endsWith("occurs here") || d.message.endsWith("is borrowed here")
+  )[0]?.location.range.start.line;
   const toline = diag.relatedInformation?.filter((d) =>
     d.message.endsWith("borrow later used here")
   )[0]?.location.range.end.line;
@@ -567,8 +568,9 @@ function image597(
   const validto = diag.relatedInformation?.filter((d) =>
     d.message.endsWith("dropped here while still borrowed")
   )[0]?.location.range.end.line;
-  const lateruseObj = diag.relatedInformation?.filter((d) =>
-    d.message.endsWith("borrow later used here")
+  const lateruseObj = diag.relatedInformation?.filter(
+    (d) =>
+      d.message.endsWith("borrow later used here") || d.message.endsWith("borrow later stored here")
   )[0];
   const laterMightUse = diag.relatedInformation?.filter((d) =>
     d.message.startsWith("borrow might be used here,")
@@ -589,13 +591,14 @@ function image597(
     const userfrom = lateruseObj.location.range.start.character;
     const userto = lateruseObj.location.range.end.character;
     const user = line.slice(userfrom, userto);
-    const xshift = getXshift(editor, validfrom, lateruse) * CONFIG.charwidth;
+    const [lf, lt] = minmax(validfrom, validto, lateruse);
+    const xshift = getXshift(editor, lf, lt + 1) * CONFIG.charwidth;
     const [s, li, _] = regionPointConflict(
       xshift,
       validfrom,
       validto,
       lateruse,
-      lateruse + 1,
+      lt + 1,
       `\`${user}\` borrows from \`${borrowed}\` and can only be used in this region`,
       `\`${borrowed}\` is no longer valid, while \`${user}\` is still borrowing it`,
       `tip: make sure \`${user}\` borrows from a valid value`,
