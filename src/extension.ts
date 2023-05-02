@@ -5,7 +5,7 @@ import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 import * as fs from "fs";
 
-const VERSION = "0.0.5";
+const VERSION = "0.0.6";
 let intervalHandle: number | null = null;
 export function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
@@ -30,22 +30,28 @@ export function activate(context: vscode.ExtensionContext) {
       });
   }
 
-  // context.subscriptions.push(
-  //   languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
-  //     const editor = vscode.window.activeTextEditor;
-  //     if (editor === undefined) {
-  //       return;
-  //     }
-  //     saveDiagnostics(editor);
-  //   })
-  // );
-  intervalHandle = setInterval((_: vscode.TextDocument) => {
-    const editor = vscode.window.activeTextEditor;
-    if (editor === undefined) {
-      return;
-    }
-    saveDiagnostics(editor);
-  }, 1000);
+  let timeoutHandle: NodeJS.Timeout | null = null;
+  context.subscriptions.push(
+    languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor === undefined) {
+        return;
+      }
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
+      timeoutHandle = setTimeout(() => {
+        saveDiagnostics(editor);
+      }, 200);
+    })
+  );
+  // intervalHandle = setInterval((_: vscode.TextDocument) => {
+  //   const editor = vscode.window.activeTextEditor;
+  //   if (editor === undefined) {
+  //     return;
+  //   }
+  //   saveDiagnostics(editor);
+  // }, 1000);
   // context.subscriptions.push(
   //   vscode.workspace.onDidSaveTextDocument((_: vscode.TextDocument) => {
   //     const editor = vscode.window.activeTextEditor;
