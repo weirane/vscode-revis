@@ -5,7 +5,7 @@ import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 import * as fs from "fs";
 
-const VERSION = "0.0.7";
+const VERSION = "0.1.0";
 let intervalHandle: number | null = null;
 export function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
