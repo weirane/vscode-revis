@@ -27,4 +27,4 @@ To refresh the visualizations, save the current file.
 
 ## Note
 
-This extension is still in an early stage. Please file an issue or contact Ruochen (wangrc+231@ucsd.edu) if you find any bugs/confusing points.
+This extension is still in an early stage. Please file an issue or contact Ruochen (wangrc@ucsd.edu) if you find any bugs/confusing points.
