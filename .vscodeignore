@@ -2,6 +2,7 @@
 .vscode-test/**
 src/**
 node_modules/**
+test-project/
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
