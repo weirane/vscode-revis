@@ -7,6 +7,12 @@ import * as fs from "fs";
 
 const VERSION = "0.1.1";
 let intervalHandle: number | null = null;
+
+const initialStamp = Math.floor(Date.now() / 1000);
+let buildCnt = 1;
+let msgCnt = 1;
+let msgMap = new Map<string, number>();
+
 export function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
     log.error("no workspace folders");
@@ -14,6 +20,14 @@ export function activate(context: vscode.ExtensionContext) {
   }
   const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
   fs.writeFileSync(dir + "/.errorviz-version", VERSION);
+
+  if (!fs.existsSync(dir + "/.log")){
+    console.log("Writing headers");
+    fs.writeFileSync(dir + "/.log", "build num,code,id,time diff");
+  }
+  let stream = fs.createWriteStream(dir + "/.log", {flags:'a'});
+  stream.write("\n0,New Session,0,0");
+
   const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
   const useRustcErrorCode = raconfig.get<boolean>("diagnostics.useRustcErrorCode");
   if (!useRustcErrorCode) {
@@ -64,6 +78,20 @@ export function activate(context: vscode.ExtensionContext) {
   //     }, 300);
   //   })
   // );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument((_: vscode.TextDocument) => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor === undefined) {
+        return;
+      }
+      let time = Math.floor(Date.now() / 1000);
+      setTimeout(() => {
+        logDiagnostics(editor, stream, time);
+      }, 1000);
+    })
+  );
+
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((e) => {
       if (e === undefined) {
@@ -81,6 +109,51 @@ export function activate(context: vscode.ExtensionContext) {
       clearAllVisualizations
     )
   );
+}
+
+function logDiagnostics(editor: vscode.TextEditor, stream: fs.WriteStream, time: number) {
+  const doc = editor.document;
+  if (doc.languageId !== "rust") {
+    return;
+  }
+  const diagnostics = languages
+    .getDiagnostics(doc.uri)
+    .filter((d) => {
+      return (
+        d.source === "rustc" &&
+        d.severity === vscode.DiagnosticSeverity.Error &&
+        typeof d.code === "object" &&
+        typeof d.code.value === "string"
+      );
+    });
+
+  if (diagnostics.length === 0){
+    console.log("Success");
+    console.log(time - initialStamp);
+    stream.write('\n' + buildCnt + ',' + "Success" + ',0,' + (time - initialStamp));
+  }
+
+  for (const diag of diagnostics) {
+    if (diag.code === undefined || typeof diag.code === "number" || typeof diag.code === "string") {
+      log.error("unexpected diag.code type", typeof diag.code);
+      return;
+    }
+
+    if (!msgMap.has(diag.message)){
+      msgMap.set(diag.message, msgCnt);
+      msgCnt++;
+    }
+
+    let code = diag.code.value;
+    if (typeof code === "string" && code[0] !== 'E'){
+      code = "Syntax";
+    }
+    stream.write('\n' + buildCnt + ',' + code + ',' + msgMap.get(diag.message) + ',' + (time - initialStamp));
+    console.log(diag.code.value);
+    console.log(diag.message);
+    console.log(time - initialStamp);
+  }
+  buildCnt++;
 }
 
 function saveDiagnostics(editor: vscode.TextEditor) {

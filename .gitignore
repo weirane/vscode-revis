@@ -4,3 +4,4 @@ node_modules
 .vscode-test/
 test-project/
 *.vsix
+.DS_Store
