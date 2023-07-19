@@ -21,8 +21,8 @@ export function activate(context: vscode.ExtensionContext) {
   const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
   fs.writeFileSync(dir + "/.errorviz-version", VERSION);
 
+  //create log if it doesn't exist, create strean and declare new session
   if (!fs.existsSync(dir + "/.log")){
-    console.log("Writing headers");
     fs.writeFileSync(dir + "/.log", "build num,code,id,time diff");
   }
   let stream = fs.createWriteStream(dir + "/.log", {flags:'a'});
@@ -126,10 +126,9 @@ function logDiagnostics(editor: vscode.TextEditor, stream: fs.WriteStream, time:
         typeof d.code.value === "string"
       );
     });
-
+  
+  //no errors = successful compilation
   if (diagnostics.length === 0){
-    console.log("Success");
-    console.log(time - initialStamp);
     stream.write('\n' + buildCnt + ',' + "Success" + ',0,' + (time - initialStamp));
   }
 
@@ -139,19 +138,18 @@ function logDiagnostics(editor: vscode.TextEditor, stream: fs.WriteStream, time:
       return;
     }
 
+    //check for existence in map
     if (!msgMap.has(diag.message)){
       msgMap.set(diag.message, msgCnt);
       msgCnt++;
     }
 
+    //syntax errors dont follow Rust error code conventions
     let code = diag.code.value;
     if (typeof code === "string" && code[0] !== 'E'){
       code = "Syntax";
     }
     stream.write('\n' + buildCnt + ',' + code + ',' + msgMap.get(diag.message) + ',' + (time - initialStamp));
-    console.log(diag.code.value);
-    console.log(diag.message);
-    console.log(time - initialStamp);
   }
   buildCnt++;
 }
