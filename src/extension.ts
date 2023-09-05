@@ -4,14 +4,19 @@ import * as errorviz from "./errorviz";
 import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 import * as fs from "fs";
+import { FormPanel } from "./telemetry/form";
+import TelemetryReporter from '@vscode/extension-telemetry';
+
 
 const VERSION = "0.1.1";
 let intervalHandle: number | null = null;
 
+const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
-let buildCnt = 1;
 let msgCnt = 1;
 let msgMap = new Map<string, number>();
+let stream: fs.WriteStream;
+let reporter: TelemetryReporter;
 
 export function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
@@ -21,12 +26,29 @@ export function activate(context: vscode.ExtensionContext) {
   const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
   fs.writeFileSync(dir + "/.errorviz-version", VERSION);
 
-  //create log if it doesn't exist, create strean and declare new session
-  if (!fs.existsSync(dir + "/.log")){
-    fs.writeFileSync(dir + "/.log", "build num,code,id,time diff");
+  vscode.window.showInformationMessage(
+    "Would you like to participate in research and learn about your error resolution skills?",
+    "Yes",
+    "No"
+    )
+    .then((sel) => {
+      if (sel === "Yes"){
+        FormPanel.render();
+      }
+    });
+  
+  if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")){
+    if (vscode.workspace.getConfiguration("errorviz").get("sendLogs")){
+      reporter = new TelemetryReporter(key);
+      context.subscriptions.push(reporter);
+    }
+
+    if (!fs.existsSync(context.globalStorageUri.fsPath + "/log.json")){
+      fs.writeFileSync(context.globalStorageUri.fsPath + "/log.json", "do not modify\n");
+    }
+    stream = fs.createWriteStream(context.globalStorageUri.fsPath + "/log.json", {flags:'a'});
+    stream.write("{\"new session\"}\n");
   }
-  let stream = fs.createWriteStream(dir + "/.log", {flags:'a'});
-  stream.write("\n0,New Session,0,0");
 
   const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
   const useRustcErrorCode = raconfig.get<boolean>("diagnostics.useRustcErrorCode");
@@ -44,6 +66,25 @@ export function activate(context: vscode.ExtensionContext) {
       });
   }
 
+  if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")){
+    context.subscriptions.push(
+      languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
+      
+          const editor = vscode.window.activeTextEditor;
+          if (editor === undefined) {
+            return;
+          }
+          if (stream === undefined){
+            return;
+          }
+          const time = Math.floor(Date.now() / 1000);
+          setTimeout(() => {
+            logDiagnostics(editor, stream, time);
+          }, 300);
+        })
+    );
+  }
+
   let timeoutHandle: NodeJS.Timeout | null = null;
   context.subscriptions.push(
     languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
@@ -57,38 +98,6 @@ export function activate(context: vscode.ExtensionContext) {
       timeoutHandle = setTimeout(() => {
         saveDiagnostics(editor);
       }, 200);
-    })
-  );
-  // intervalHandle = setInterval((_: vscode.TextDocument) => {
-  //   const editor = vscode.window.activeTextEditor;
-  //   if (editor === undefined) {
-  //     return;
-  //   }
-  //   saveDiagnostics(editor);
-  // }, 1000);
-  // context.subscriptions.push(
-  //   vscode.workspace.onDidSaveTextDocument((_: vscode.TextDocument) => {
-  //     const editor = vscode.window.activeTextEditor;
-  //     if (editor === undefined) {
-  //       return;
-  //     }
-  //     // wait for rust-analyzer diagnostics to be ready
-  //     setTimeout(() => {
-  //       saveDiagnostics(editor);
-  //     }, 300);
-  //   })
-  // );
-
-  context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument((_: vscode.TextDocument) => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor === undefined) {
-        return;
-      }
-      let time = Math.floor(Date.now() / 1000);
-      setTimeout(() => {
-        logDiagnostics(editor, stream, time);
-      }, 1000);
     })
   );
 
@@ -127,31 +136,38 @@ function logDiagnostics(editor: vscode.TextEditor, stream: fs.WriteStream, time:
       );
     });
   
-  //no errors = successful compilation
-  if (diagnostics.length === 0){
-    stream.write('\n' + buildCnt + ',' + "Success" + ',0,' + (time - initialStamp));
+  let errors = [];
+  if (diagnostics.length !== 0) {
+    for (const diag of diagnostics) {
+      if (diag.code === undefined || typeof diag.code === "number" || typeof diag.code === "string") {
+        log.error("unexpected diag.code type", typeof diag.code);
+        return;
+      }
+  
+      //check for existence in map
+      if (!msgMap.has(diag.message)){
+        msgMap.set(diag.message, msgCnt);
+        msgCnt++;
+      }
+  
+      let code = diag.code.value;
+      //syntax errors dont follow Rust error code conventions
+      if (typeof code === "string" && code[0] !== 'E'){
+        code = "Syntax";
+      }
+
+      errors.push({code: code, id: msgMap.get(diag.message)});
+    }
   }
 
-  for (const diag of diagnostics) {
-    if (diag.code === undefined || typeof diag.code === "number" || typeof diag.code === "string") {
-      log.error("unexpected diag.code type", typeof diag.code);
-      return;
-    }
+  const entry = JSON.stringify({build: {errors: errors, seconds: (time - initialStamp)}}) + '\n';
+  stream.write(entry);
+}
 
-    //check for existence in map
-    if (!msgMap.has(diag.message)){
-      msgMap.set(diag.message, msgCnt);
-      msgCnt++;
-    }
-
-    //syntax errors dont follow Rust error code conventions
-    let code = diag.code.value;
-    if (typeof code === "string" && code[0] !== 'E'){
-      code = "Syntax";
-    }
-    stream.write('\n' + buildCnt + ',' + code + ',' + msgMap.get(diag.message) + ',' + (time - initialStamp));
-  }
-  buildCnt++;
+function sendDiagnostics(log: String, reporter: TelemetryReporter){
+  //reporter.sendTelemetryErrorEvent(entry);
+  //reporter.sendTelemetryEvent("build", {entry}, {"seconds" : time - initialStamp});
+  //reporter.sendTelemetryEvent('sampleEvent', { 'stringProp': 'some string' }, { 'numericMeasure': 123 });
 }
 
 function saveDiagnostics(editor: vscode.TextEditor) {
