@@ -59,7 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
   if (!useRustcErrorCode) {
     vscode.window
       .showWarningMessage(
-        "errorviz wants to set `rust-analyzer.diagnostics.useRustcErrorCode` to true in settings.json.",
+        "revis wants to set `rust-analyzer.diagnostics.useRustcErrorCode` to true in settings.json.",
         "Allow",
         "I'll do it myself"
       )
@@ -104,11 +104,11 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
   context.subscriptions.push(
-    vscode.commands.registerTextEditorCommand("errorviz.toggleVisualization", toggleVisualization)
+    vscode.commands.registerTextEditorCommand("revis.toggleVisualization", toggleVisualization)
   );
   context.subscriptions.push(
     vscode.commands.registerTextEditorCommand(
-      "errorviz.clearAllVisualizations",
+      "revis.clearAllVisualizations",
       clearAllVisualizations
     )
   );

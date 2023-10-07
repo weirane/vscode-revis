@@ -1,4 +1,4 @@
-# errorviz
+# REVIS
 
 ## Features
 
@@ -21,8 +21,8 @@ The configuration will be added to `.vscode/settings.json` under the project roo
 ## How to use
 
 Right-pointing red triangles will be displayed for supported errors after the source file is saved.
-To display/hide the visualization, **move the text cursor to the line** with the red triangle and execute command `errorviz.toggleVisualization` or use the keyboard shortcut **<kbd>Ctrl+Shift+V</kbd>**.
-To clear all visualizations, execute command `errorviz.clearAllVisualizations`.
+To display/hide the visualization, **move the text cursor to the line** with the red triangle and execute command `revis.toggleVisualization` or use the keyboard shortcut **<kbd>Ctrl+Shift+V</kbd>**.
+To clear all visualizations, execute command `revis.clearAllVisualizations`.
 To refresh the visualizations, save the current file.
 
 ## Note

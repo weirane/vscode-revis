@@ -1,14 +1,14 @@
 {
   "name": "errorviz",
   "publisher": "weirane",
-  "displayName": "errorviz",
+  "displayName": "REVIS",
   "icon": "assets/errorviz-256x256.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/weirane/vscode-errorviz"
+    "url": "https://github.com/weirane/vscode-revis"
   },
   "description": "Visualize lifetime-related Rust compiler errors",
-  "version": "0.1.1",
+  "version": "0.1.3",
   "license": "MIT",
   "engines": {
     "vscode": "^1.73.0"
@@ -23,12 +23,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "errorviz.toggleVisualization",
-        "title": "errorviz: Toggle Visualization"
+        "command": "revis.toggleVisualization",
+        "title": "revis: Toggle Visualization"
       },
       {
-        "command": "errorviz.clearAllVisualizations",
-        "title": "errorviz: Clear All Visualizations"
+        "command": "revis.clearAllVisualizations",
+        "title": "revis: Clear All Visualizations"
       }
     ],
     "keybindings": [
@@ -36,7 +36,7 @@
         "key": "ctrl+shift+v",
         "mac": "cmd+shift+v",
         "when": "editorTextFocus && editorLangId == 'rust'",
-        "command": "errorviz.toggleVisualization"
+        "command": "revis.toggleVisualization"
       }
     ],
     "configuration": {
