@@ -13,8 +13,7 @@ let intervalHandle: number | null = null;
 
 const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
-let msgCnt = 1;
-let msgMap = new Map<string, number>();
+let time = initialStamp;
 let stream: fs.WriteStream;
 let reporter: TelemetryReporter;
 
@@ -26,17 +25,20 @@ export function activate(context: vscode.ExtensionContext) {
   const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
   fs.writeFileSync(dir + "/.errorviz-version", VERSION);
 
-  vscode.window.showInformationMessage(
-    "Would you like to participate in research and learn about your error resolution skills?",
-    "Yes",
-    "No"
-    )
-    .then((sel) => {
-      if (sel === "Yes"){
-        FormPanel.render();
-      }
-    });
+  //schedule prompt to notify user of research participation
+  // vscode.window.showInformationMessage(
+  //   "Would you like to participate in research and learn about your error resolution skills?",
+  //   "Yes",
+  //   "No"
+  //   )
+  //   .then((sel) => {
+  //     if (sel === "Yes"){
+  //       FormPanel.render();
+  //     }
+  //   });
   
+  //set up telemetry and log storage based on settings
+  //default is record=true, send=false
   if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")){
     if (vscode.workspace.getConfiguration("errorviz").get("sendLogs")){
       reporter = new TelemetryReporter(key);
@@ -48,8 +50,10 @@ export function activate(context: vscode.ExtensionContext) {
     }
     stream = fs.createWriteStream(context.globalStorageUri.fsPath + "/log.json", {flags:'a'});
     stream.write("{\"new session\"}\n");
+    console.log(context.globalStorageUri.fsPath);
   }
 
+  //settings.json config to get rustc err code
   const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
   const useRustcErrorCode = raconfig.get<boolean>("diagnostics.useRustcErrorCode");
   if (!useRustcErrorCode) {
@@ -66,25 +70,6 @@ export function activate(context: vscode.ExtensionContext) {
       });
   }
 
-  if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")){
-    context.subscriptions.push(
-      languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
-      
-          const editor = vscode.window.activeTextEditor;
-          if (editor === undefined) {
-            return;
-          }
-          if (stream === undefined){
-            return;
-          }
-          const time = Math.floor(Date.now() / 1000);
-          setTimeout(() => {
-            logDiagnostics(editor, stream, time);
-          }, 300);
-        })
-    );
-  }
-
   let timeoutHandle: NodeJS.Timeout | null = null;
   context.subscriptions.push(
     languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
@@ -98,6 +83,15 @@ export function activate(context: vscode.ExtensionContext) {
       timeoutHandle = setTimeout(() => {
         saveDiagnostics(editor);
       }, 200);
+
+      //if logging is enabled and past the 2-second throttle period
+      if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")
+          && time <= (Math.floor(Date.now() / 1000) - 2)){
+        time = Math.floor(Date.now() / 1000);
+        setTimeout(() => {
+          logError(editor, stream, time);
+        }, 200);
+      }
     })
   );
 
@@ -120,8 +114,11 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-function logDiagnostics(editor: vscode.TextEditor, stream: fs.WriteStream, time: number) {
+//create a json object representing current diagnostics and writes to stream, may call sendDiagnostics
+function logError(editor: vscode.TextEditor, stream: fs.WriteStream, time: number) {
   const doc = editor.document;
+
+  //filter for only rust errors
   if (doc.languageId !== "rust") {
     return;
   }
@@ -129,13 +126,13 @@ function logDiagnostics(editor: vscode.TextEditor, stream: fs.WriteStream, time:
     .getDiagnostics(doc.uri)
     .filter((d) => {
       return (
-        d.source === "rustc" &&
         d.severity === vscode.DiagnosticSeverity.Error &&
         typeof d.code === "object" &&
         typeof d.code.value === "string"
       );
     });
-  
+
+  //if errors are present, for every error create a JSON object in the errors list
   let errors = [];
   if (diagnostics.length !== 0) {
     for (const diag of diagnostics) {
@@ -143,25 +140,29 @@ function logDiagnostics(editor: vscode.TextEditor, stream: fs.WriteStream, time:
         log.error("unexpected diag.code type", typeof diag.code);
         return;
       }
-  
-      //check for existence in map
-      if (!msgMap.has(diag.message)){
-        msgMap.set(diag.message, msgCnt);
-        msgCnt++;
-      }
-  
       let code = diag.code.value;
+
       //syntax errors dont follow Rust error code conventions
       if (typeof code === "string" && code[0] !== 'E'){
         code = "Syntax";
       }
 
-      errors.push({code: code, id: msgMap.get(diag.message)});
+      //
+      errors.push({
+                  code: code,
+                  msg: diag.message,
+                  range:{
+                    start: diag.range.start.line,
+                    end: diag.range.end.line
+                  }
+                });
     }
   }
-
+  
+  //write to file
   const entry = JSON.stringify({build: {errors: errors, seconds: (time - initialStamp)}}) + '\n';
   stream.write(entry);
+  console.log(entry);
 }
 
 function sendDiagnostics(log: String, reporter: TelemetryReporter){
