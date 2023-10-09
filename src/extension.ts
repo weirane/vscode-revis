@@ -4,8 +4,8 @@ import * as errorviz from "./errorviz";
 import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 import * as fs from "fs";
-import { FormPanel } from "./telemetry/form";
 import TelemetryReporter from '@vscode/extension-telemetry';
+import * as crypto from 'crypto';
 
 
 const VERSION = "0.1.1";
@@ -13,6 +13,8 @@ let intervalHandle: number | null = null;
 
 const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
+let buildNum = 0;
+let logPath = "";
 let time = initialStamp;
 let stream: fs.WriteStream;
 let reporter: TelemetryReporter;
@@ -45,12 +47,17 @@ export function activate(context: vscode.ExtensionContext) {
       context.subscriptions.push(reporter);
     }
 
-    if (!fs.existsSync(context.globalStorageUri.fsPath + "/log.json")){
-      fs.writeFileSync(context.globalStorageUri.fsPath + "/log.json", "do not modify\n");
+    logPath = context.globalStorageUri.fsPath + "/log.json";
+
+    if (!fs.existsSync(logPath)){
+      fs.writeFileSync(logPath, "do not modify\n");
     }
-    stream = fs.createWriteStream(context.globalStorageUri.fsPath + "/log.json", {flags:'a'});
+    stream = fs.createWriteStream(logPath, {flags:'a'});
     stream.write("{\"new session\"}\n");
-    console.log(context.globalStorageUri.fsPath);
+
+    vscode.workspace.openTextDocument(logPath).then((textDocument => {
+      buildNum = textDocument.lineCount;
+    }));
   }
 
   //settings.json config to get rustc err code
@@ -80,18 +87,18 @@ export function activate(context: vscode.ExtensionContext) {
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);
       }
+
+      //if logging is enabled and past the throttle period
+      if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")
+          && time <= (Math.floor(Date.now() / 1000) - 3)){
+        time = Math.floor(Date.now() / 1000);
+        logError(editor, stream, time);
+      }
+
       timeoutHandle = setTimeout(() => {
         saveDiagnostics(editor);
       }, 200);
 
-      //if logging is enabled and past the 2-second throttle period
-      if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")
-          && time <= (Math.floor(Date.now() / 1000) - 2)){
-        time = Math.floor(Date.now() / 1000);
-        setTimeout(() => {
-          logError(editor, stream, time);
-        }, 200);
-      }
     })
   );
 
@@ -147,10 +154,10 @@ function logError(editor: vscode.TextEditor, stream: fs.WriteStream, time: numbe
         code = "Syntax";
       }
 
-      //
+      //add error data to list
       errors.push({
                   code: code,
-                  msg: diag.message,
+                  msg: hashString(diag.message),
                   range:{
                     start: diag.range.start.line,
                     end: diag.range.end.line
@@ -158,17 +165,33 @@ function logError(editor: vscode.TextEditor, stream: fs.WriteStream, time: numbe
                 });
     }
   }
-  
+
   //write to file
-  const entry = JSON.stringify({build: {errors: errors, seconds: (time - initialStamp)}}) + '\n';
+  const entry = JSON.stringify({
+                                errors: errors, 
+                                seconds: (time - initialStamp),
+                                file: hashString(doc.fileName)
+                              }) + '\n';
   stream.write(entry);
   console.log(entry);
+
+  //increase the buildcount and check if divisible by some number
+  buildNum++;
+  sendDiagnostics(reporter);
 }
 
-function sendDiagnostics(log: String, reporter: TelemetryReporter){
-  //reporter.sendTelemetryErrorEvent(entry);
-  //reporter.sendTelemetryEvent("build", {entry}, {"seconds" : time - initialStamp});
-  //reporter.sendTelemetryEvent('sampleEvent', { 'stringProp': 'some string' }, { 'numericMeasure': 123 });
+function sendDiagnostics(reporter: TelemetryReporter){
+  //read file
+  const data = fs.readFileSync(logPath, 'utf-8');
+  reporter.sendTelemetryEvent(data);
+}
+
+
+//hashes and truncates strings
+function hashString(input: string): string {
+  const hash = crypto.createHash('sha256');
+  hash.update(input);
+  return hash.digest('hex').slice(0,8);
 }
 
 function saveDiagnostics(editor: vscode.TextEditor) {
@@ -182,7 +205,7 @@ function saveDiagnostics(editor: vscode.TextEditor) {
     // only include _supported_ _rust_ _errors_
     .filter((d) => {
       return (
-        d.source === "rustc" &&
+        //d.source === "rustc" &&
         d.severity === vscode.DiagnosticSeverity.Error &&
         typeof d.code === "object" &&
         typeof d.code.value === "string" &&
