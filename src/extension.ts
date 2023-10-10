@@ -78,6 +78,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   let timeoutHandle: NodeJS.Timeout | null = null;
+  let throttleLog = false;
   context.subscriptions.push(
     languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
       const editor = vscode.window.activeTextEditor;
@@ -88,11 +89,19 @@ export function activate(context: vscode.ExtensionContext) {
         clearTimeout(timeoutHandle);
       }
 
-      //if logging is enabled and past the throttle period
-      if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")
-          && time <= (Math.floor(Date.now() / 1000) - 3)){
-        time = Math.floor(Date.now() / 1000);
-        logError(editor, stream, time);
+      //if logging is enabled, wait 3 seconds for diagnostics to load in
+      if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")){
+        //throttle diagnostic report to get final diagnostic
+        if (!throttleLog){
+          if (time !== 0){
+            time = Math.floor(Date.now() / 1000);
+            throttleLog = true;
+            setTimeout(() => {
+              logError(editor, stream, time);
+              throttleLog = false;
+            }, 3000);
+          }
+        }
       }
 
       timeoutHandle = setTimeout(() => {
@@ -133,6 +142,7 @@ function logError(editor: vscode.TextEditor, stream: fs.WriteStream, time: numbe
     .getDiagnostics(doc.uri)
     .filter((d) => {
       return (
+        //d.source === "rustc" &&
         d.severity === vscode.DiagnosticSeverity.Error &&
         typeof d.code === "object" &&
         typeof d.code.value === "string"
@@ -156,34 +166,37 @@ function logError(editor: vscode.TextEditor, stream: fs.WriteStream, time: numbe
 
       //add error data to list
       errors.push({
-                  code: code,
-                  msg: hashString(diag.message),
-                  range:{
-                    start: diag.range.start.line,
-                    end: diag.range.end.line
-                  }
-                });
+        code: code,
+        msg: hashString(diag.message),
+        range:{
+          start: diag.range.start.line,
+          end: diag.range.end.line
+        }
+      });
     }
   }
 
   //write to file
   const entry = JSON.stringify({
-                                errors: errors, 
-                                seconds: (time - initialStamp),
-                                file: hashString(doc.fileName)
-                              }) + '\n';
+    errors: errors, 
+    seconds: (time - initialStamp),
+    file: hashString(doc.fileName)
+  }) + '\n';
   stream.write(entry);
   console.log(entry);
 
   //increase the buildcount and check if divisible by some number
   buildNum++;
-  sendDiagnostics(reporter);
+  if (buildNum % 10 === 0
+      && vscode.workspace.getConfiguration("errorviz").get("sendLogs")){
+    sendDiagnostics(reporter);
+  }
 }
 
 function sendDiagnostics(reporter: TelemetryReporter){
-  //read file
+  //read file and send
   const data = fs.readFileSync(logPath, 'utf-8');
-  reporter.sendTelemetryEvent(data);
+  reporter.sendTelemetryEvent('errorLog', {'data': data });
 }
 
 
@@ -205,7 +218,7 @@ function saveDiagnostics(editor: vscode.TextEditor) {
     // only include _supported_ _rust_ _errors_
     .filter((d) => {
       return (
-        //d.source === "rustc" &&
+        d.source === "rustc" &&
         d.severity === vscode.DiagnosticSeverity.Error &&
         typeof d.code === "object" &&
         typeof d.code.value === "string" &&
