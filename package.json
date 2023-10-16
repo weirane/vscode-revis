@@ -21,6 +21,7 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "seenform" : false,
     "commands": [
       {
         "command": "revis.toggleVisualization",
@@ -29,6 +30,10 @@
       {
         "command": "revis.clearAllVisualizations",
         "title": "revis: Clear All Visualizations"
+      },
+      {
+        "command": "revis.researchParticipation",
+        "title": "revis: View Consent to Participate in Research"
       }
     ],
     "keybindings": [
@@ -37,20 +42,26 @@
         "mac": "cmd+shift+v",
         "when": "editorTextFocus && editorLangId == 'rust'",
         "command": "revis.toggleVisualization"
+      },
+      {
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorLangId == 'rust'",
+        "command": "revis.researchParticipation"
       }
     ],
     "configuration": {
-      "title": "errorviz",
+      "title": "revis",
       "properties": {
-        "errorviz.sendLogs": {
+        "revis.researchRecruitment": {
           "type": "boolean",
-          "default": false,
-          "description": "Enable error log telemetry"
+          "default": "true",
+          "description": "Display an infomessage about research participation"
         },
-        "errorviz.recordLogs": {
+        "revis.errorLogging": {
           "type": "boolean",
-          "default": true,
-          "description": "Enable error log records"
+          "default": "false",
+          "description": "Enable the recording and sending of error logs for academic research (must agree to consent form before enabled)."
         }
       }
     }

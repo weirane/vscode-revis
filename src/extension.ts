@@ -5,6 +5,7 @@ import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 import * as fs from "fs";
 import TelemetryReporter from '@vscode/extension-telemetry';
+import { FormPanel } from "./research/form";
 import * as crypto from 'crypto';
 
 
@@ -13,6 +14,7 @@ let intervalHandle: number | null = null;
 
 const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
+let visToggled = false;
 let buildNum = 0;
 let logPath = "";
 let time = initialStamp;
@@ -25,32 +27,34 @@ export function activate(context: vscode.ExtensionContext) {
     return;
   }
   const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  fs.writeFileSync(dir + "/.errorviz-version", VERSION);
+  fs.writeFileSync(dir + "/.revis-version", VERSION);
 
   //schedule prompt to notify user of research participation
-  // vscode.window.showInformationMessage(
-  //   "Would you like to participate in research and learn about your error resolution skills?",
-  //   "Yes",
-  //   "No"
-  //   )
-  //   .then((sel) => {
-  //     if (sel === "Yes"){
-  //       FormPanel.render();
-  //     }
-  //   });
+
+if (vscode.workspace.getConfiguration("revis").get("researchRecruitment")){
+  vscode.window.showInformationMessage(
+    "Would you like to participate in research and learn about your error resolution skills?",
+    "Yes",
+    "No"
+    )
+    .then((sel) => {
+      if (sel === "Yes"){
+        FormPanel.render();
+      }
+    });
+    vscode.workspace.getConfiguration("revis").update("researchRecruitment", false);
+}
   
   //set up telemetry and log storage based on settings
   //default is record=true, send=false
-  if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")){
-    if (vscode.workspace.getConfiguration("errorviz").get("sendLogs")){
-      reporter = new TelemetryReporter(key);
-      context.subscriptions.push(reporter);
-    }
+  if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
+    reporter = new TelemetryReporter(key);
+    context.subscriptions.push(reporter);
 
     logPath = context.globalStorageUri.fsPath + "/log.json";
 
     if (!fs.existsSync(logPath)){
-      fs.writeFileSync(logPath, "do not modify\n");
+      fs.writeFileSync(logPath, "include data from the demographic quiz in header\n");
     }
     stream = fs.createWriteStream(logPath, {flags:'a'});
     stream.write("{\"new session\"}\n");
@@ -78,7 +82,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   let timeoutHandle: NodeJS.Timeout | null = null;
-  let throttleLog = false;
+  let lastSuccess = false;
   context.subscriptions.push(
     languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
       const editor = vscode.window.activeTextEditor;
@@ -88,26 +92,43 @@ export function activate(context: vscode.ExtensionContext) {
       if (timeoutHandle !== null) {
         clearTimeout(timeoutHandle);
       }
-
-      //if logging is enabled, wait 3 seconds for diagnostics to load in
-      if (vscode.workspace.getConfiguration("errorviz").get("recordLogs")){
-        //throttle diagnostic report to get final diagnostic
-        if (!throttleLog){
-          if (time !== 0){
-            time = Math.floor(Date.now() / 1000);
-            throttleLog = true;
-            setTimeout(() => {
-              logError(editor, stream, time);
-              throttleLog = false;
-            }, 3000);
-          }
-        }
-      }
-
       timeoutHandle = setTimeout(() => {
         saveDiagnostics(editor);
       }, 200);
 
+      //if logging is enabled, wait 3 seconds for diagnostics to load in
+      if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
+        //make sure rustc error diagnostics are reported
+        if (time !== 0){
+          time = Math.floor(Date.now() / 1000);
+          let doc = editor.document;
+
+          //filter for only rust errors
+          if (doc.languageId !== "rust") {
+            return false;
+          }
+          let diagnostics = languages
+            .getDiagnostics(doc.uri)
+            .filter((d) => {
+              return (
+                //d.source === "rustc" &&
+                d.severity === vscode.DiagnosticSeverity.Error &&
+                typeof d.code === "object" &&
+                typeof d.code.value === "string"
+              );
+            });
+          //if empty and previously didn't compile successfully log empty array
+          if (diagnostics.length === 0 && !lastSuccess){
+            logError(diagnostics, doc, stream, time);
+            lastSuccess = true;
+          }
+          //if not empty, wait until rustc codes generate to log
+          else if (diagnostics.filter(e => e.source === 'rustc').length > 0){
+            logError(diagnostics, doc, stream, time);
+            lastSuccess = false;
+          }
+        }
+      }
     })
   );
 
@@ -123,6 +144,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerTextEditorCommand("revis.toggleVisualization", toggleVisualization)
   );
   context.subscriptions.push(
+    vscode.commands.registerCommand("revis.researchParticipation", FormPanel.render)
+  );
+  context.subscriptions.push(
     vscode.commands.registerTextEditorCommand(
       "revis.clearAllVisualizations",
       clearAllVisualizations
@@ -131,66 +155,52 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 //create a json object representing current diagnostics and writes to stream, may call sendDiagnostics
-function logError(editor: vscode.TextEditor, stream: fs.WriteStream, time: number) {
-  const doc = editor.document;
-
-  //filter for only rust errors
-  if (doc.languageId !== "rust") {
-    return;
-  }
-  const diagnostics = languages
-    .getDiagnostics(doc.uri)
-    .filter((d) => {
-      return (
-        //d.source === "rustc" &&
-        d.severity === vscode.DiagnosticSeverity.Error &&
-        typeof d.code === "object" &&
-        typeof d.code.value === "string"
-      );
-    });
-
-  //if errors are present, for every error create a JSON object in the errors list
+function logError(diagnostics: vscode.Diagnostic[], doc:  vscode.TextDocument, stream: fs.WriteStream, time: number): boolean {
+  
+  //for every error create a JSON object in the errors list
   let errors = [];
-  if (diagnostics.length !== 0) {
-    for (const diag of diagnostics) {
-      if (diag.code === undefined || typeof diag.code === "number" || typeof diag.code === "string") {
-        log.error("unexpected diag.code type", typeof diag.code);
-        return;
-      }
-      let code = diag.code.value;
-
-      //syntax errors dont follow Rust error code conventions
-      if (typeof code === "string" && code[0] !== 'E'){
-        code = "Syntax";
-      }
-
-      //add error data to list
-      errors.push({
-        code: code,
-        msg: hashString(diag.message),
-        range:{
-          start: diag.range.start.line,
-          end: diag.range.end.line
-        }
-      });
+  for (const diag of diagnostics) {
+    if (diag.code === undefined || typeof diag.code === "number" || typeof diag.code === "string") {
+      log.error("unexpected diag.code type", typeof diag.code);
+      return false;
     }
+    let code = diag.code.value;
+
+    //syntax errors dont follow Rust error code conventions
+    if (typeof code === "string" && code[0] !== 'E'){
+      code = "Syntax";
+    }
+
+    //add error data to list
+    errors.push({
+      code: code,
+      msg: hashString(diag.message),
+      source: diag.source,
+      range:{
+        start: diag.range.start.line,
+        end: diag.range.end.line
+      }
+    });
   }
 
   //write to file
   const entry = JSON.stringify({
-    errors: errors, 
+    file: hashString(doc.fileName),
     seconds: (time - initialStamp),
-    file: hashString(doc.fileName)
+    revis: visToggled, 
+    errors: errors
   }) + '\n';
   stream.write(entry);
   console.log(entry);
+  visToggled = false;
 
   //increase the buildcount and check if divisible by some number
   buildNum++;
-  if (buildNum % 10 === 0
-      && vscode.workspace.getConfiguration("errorviz").get("sendLogs")){
+  if (buildNum % 100 === 0
+      && vscode.workspace.getConfiguration("revis").get("errorLogging")){
     sendDiagnostics(reporter);
   }
+  return true;
 }
 
 function sendDiagnostics(reporter: TelemetryReporter){
@@ -256,6 +266,7 @@ function saveDiagnostics(editor: vscode.TextEditor) {
 }
 
 function toggleVisualization(editor: vscode.TextEditor, _: vscode.TextEditorEdit) {
+  visToggled = true;
   const currline = editor.selection.active.line;
   const lines = [...errorviz.G.diags.keys()];
   const ontheline = lines.filter((i) => parseInt(i) === currline);
