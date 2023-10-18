@@ -53,11 +53,6 @@
     "configuration": {
       "title": "revis",
       "properties": {
-        "revis.researchRecruitment": {
-          "type": "boolean",
-          "default": "true",
-          "description": "Display an infomessage about research participation"
-        },
         "revis.errorLogging": {
           "type": "boolean",
           "default": "false",

@@ -4,6 +4,7 @@ import * as errorviz from "./errorviz";
 import { log } from "./util";
 import { codeFuncMap } from "./visualizations";
 import * as fs from "fs";
+import * as path from "path";
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { FormPanel } from "./research/form";
 import * as crypto from 'crypto';
@@ -16,7 +17,9 @@ const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
 let visToggled = false;
 let buildNum = 0;
+let fileCount = 0;
 let logPath = "";
+let logDir = "";
 let time = initialStamp;
 let stream: fs.WriteStream;
 let reporter: TelemetryReporter;
@@ -27,35 +30,27 @@ export function activate(context: vscode.ExtensionContext) {
     return;
   }
   const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  fs.writeFileSync(dir + "/.revis-version", VERSION);
+  const logDir = context.globalStorageUri.fsPath;
 
-  //schedule prompt to notify user of research participation
+  fs.writeFileSync(logDir + "/.revis-version", VERSION);
 
-if (vscode.workspace.getConfiguration("revis").get("researchRecruitment")){
-  vscode.window.showInformationMessage(
-    "Would you like to participate in research and learn about your error resolution skills?",
-    "Yes",
-    "No"
-    )
-    .then((sel) => {
-      if (sel === "Yes"){
-        FormPanel.render();
-      }
-    });
-    vscode.workspace.getConfiguration("revis").update("researchRecruitment", false);
-}
+  //Check if logfile exists and render in consent form otherwise and create logfile
+  if (!fs.existsSync(logDir + "/log1.json")){
+    FormPanel.render();
+    fs.writeFileSync(logDir + "/log1.json", "");
+  }
   
   //set up telemetry and log storage based on settings
-  //default is record=true, send=false
+  //default is false
   if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
     reporter = new TelemetryReporter(key);
     context.subscriptions.push(reporter);
 
-    logPath = context.globalStorageUri.fsPath + "/log.json";
+    //find how many json files are in folder to determine current log
+    fileCount = fs.readdirSync(logDir)
+      .filter(f => path.extname(f) === ".json").length;
+    logPath = logDir + "/log" + fileCount + ".json";
 
-    if (!fs.existsSync(logPath)){
-      fs.writeFileSync(logPath, "include data from the demographic quiz in header\n");
-    }
     stream = fs.createWriteStream(logPath, {flags:'a'});
     stream.write("{\"new session\"}\n");
 
@@ -83,6 +78,7 @@ if (vscode.workspace.getConfiguration("revis").get("researchRecruitment")){
 
   let timeoutHandle: NodeJS.Timeout | null = null;
   let lastSuccess = false;
+  let throttleLog = false;
   context.subscriptions.push(
     languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
       const editor = vscode.window.activeTextEditor;
@@ -98,8 +94,9 @@ if (vscode.workspace.getConfiguration("revis").get("researchRecruitment")){
 
       //if logging is enabled, wait 3 seconds for diagnostics to load in
       if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
-        //make sure rustc error diagnostics are reported
-        if (time !== 0){
+        //on update, wait x seconds for full diagnostics to load in
+        if (!throttleLog && time !== 0){
+          throttleLog = true;
           time = Math.floor(Date.now() / 1000);
           let doc = editor.document;
 
@@ -107,7 +104,8 @@ if (vscode.workspace.getConfiguration("revis").get("researchRecruitment")){
           if (doc.languageId !== "rust") {
             return false;
           }
-          let diagnostics = languages
+          timeoutHandle = setTimeout(() => {
+            let diagnostics = languages
             .getDiagnostics(doc.uri)
             .filter((d) => {
               return (
@@ -117,16 +115,18 @@ if (vscode.workspace.getConfiguration("revis").get("researchRecruitment")){
                 typeof d.code.value === "string"
               );
             });
-          //if empty and previously didn't compile successfully log empty array
-          if (diagnostics.length === 0 && !lastSuccess){
-            logError(diagnostics, doc, stream, time);
-            lastSuccess = true;
-          }
-          //if not empty, wait until rustc codes generate to log
-          else if (diagnostics.filter(e => e.source === 'rustc').length > 0){
-            logError(diagnostics, doc, stream, time);
-            lastSuccess = false;
-          }
+            //if empty and previously didn't compile successfully log empty array
+            if (diagnostics.length === 0 && !lastSuccess){
+              logError(diagnostics, doc, stream, time);
+              lastSuccess = true;
+            }
+            //if not empty, wait until rustc codes generate to log
+            else if (diagnostics.filter(e => e.source === 'rustc').length > 0){
+              logError(diagnostics, doc, stream, time);
+              lastSuccess = false;
+            }
+            throttleLog = false;
+          }, 2000);
         }
       }
     })
@@ -155,7 +155,7 @@ if (vscode.workspace.getConfiguration("revis").get("researchRecruitment")){
 }
 
 //create a json object representing current diagnostics and writes to stream, may call sendDiagnostics
-function logError(diagnostics: vscode.Diagnostic[], doc:  vscode.TextDocument, stream: fs.WriteStream, time: number): boolean {
+function logError(diagnostics: vscode.Diagnostic[], doc:  vscode.TextDocument, stream: fs.WriteStream, time: number) {
   
   //for every error create a JSON object in the errors list
   let errors = [];
@@ -196,11 +196,21 @@ function logError(diagnostics: vscode.Diagnostic[], doc:  vscode.TextDocument, s
 
   //increase the buildcount and check if divisible by some number
   buildNum++;
-  if (buildNum % 100 === 0
+  console.log(buildNum);
+  if (buildNum % 10 === 0
       && vscode.workspace.getConfiguration("revis").get("errorLogging")){
     sendDiagnostics(reporter);
+
+    //create new log file WIP --- need to pass writestream
+    // if (buildNum >= 10){
+    //   fileCount++;
+    //   console.log(fileCount + "sent");
+    //   logPath = logDir + "/log" + fileCount + ".json";
+    //   stream = fs.createWriteStream(logPath, {flags:'a'});
+    //   buildNum = 0;
+    //   stream.write("test");
+    // }
   }
-  return true;
 }
 
 function sendDiagnostics(reporter: TelemetryReporter){

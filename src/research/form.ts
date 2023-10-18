@@ -49,7 +49,8 @@ export class FormPanel {
             <!DOCTYPE html>
             <html>
             <script src="webview"></script>
-            <h1>REVIS Study Consent form</h1>
+            <h1>Participate in Academic Research!</h1>
+            <h2>Rust Error Study Consent form</h2>
             <p>
             You are being invited to participate in a research study titled A Real-World Study of Rust Learning. This study is being done by Michael Coblenz and Molly MacLaren from UC San Diego. You were selected to participate in this study because you downloaded our Visual Studio Code extension.
             </p><p>
