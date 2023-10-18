@@ -1,3 +1,7 @@
+//extention is test-run by pressing f5 (or function+f5)
+//while within the extension, access the consent form while on a rust file and pressing ctrl+shift+r or cmd+shift+r
+//or thru extension command pallet
+
 import * as vscode from "vscode";
 
 export class FormPanel {

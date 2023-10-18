@@ -16,10 +16,12 @@ let intervalHandle: number | null = null;
 const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
 let visToggled = false;
-let buildNum = 0;
+//these probably dont need to be global- should be passed
+let buildCount = 0;
 let fileCount = 0;
 let logPath = "";
 let logDir = "";
+//
 let time = initialStamp;
 let stream: fs.WriteStream;
 let reporter: TelemetryReporter;
@@ -30,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
     return;
   }
   const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  const logDir = context.globalStorageUri.fsPath;
+  logDir = context.globalStorageUri.fsPath;
 
   fs.writeFileSync(logDir + "/.revis-version", VERSION);
 
@@ -55,7 +57,7 @@ export function activate(context: vscode.ExtensionContext) {
     stream.write("{\"new session\"}\n");
 
     vscode.workspace.openTextDocument(logPath).then((textDocument => {
-      buildNum = textDocument.lineCount;
+      buildCount = textDocument.lineCount;
     }));
   }
 
@@ -195,19 +197,19 @@ function logError(diagnostics: vscode.Diagnostic[], doc:  vscode.TextDocument, s
   visToggled = false;
 
   //increase the buildcount and check if divisible by some number
-  buildNum++;
-  console.log(buildNum);
-  if (buildNum % 10 === 0
+  buildCount++;
+  console.log(buildCount);
+  if (buildCount % 10 === 0
       && vscode.workspace.getConfiguration("revis").get("errorLogging")){
     sendDiagnostics(reporter);
 
     //create new log file WIP --- need to pass writestream
-    // if (buildNum >= 10){
+    // if (buildCount >= 10){
     //   fileCount++;
     //   console.log(fileCount + "sent");
     //   logPath = logDir + "/log" + fileCount + ".json";
     //   stream = fs.createWriteStream(logPath, {flags:'a'});
-    //   buildNum = 0;
+    //   buildCount = 0;
     //   stream.write("test");
     // }
   }
