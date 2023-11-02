@@ -13,53 +13,31 @@ import * as crypto from 'crypto';
 const VERSION = "0.1.1";
 let intervalHandle: number | null = null;
 
+const SENDINTERVAL = 100;
+const NEWLOGINTERVAL = 1000;
 const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
 let visToggled = false;
-//these probably dont need to be global- should be passed
-let buildCount = 0;
-let fileCount = 0;
-let logPath = "";
-let logDir = "";
-//
-let time = initialStamp;
-let stream: fs.WriteStream;
-let reporter: TelemetryReporter;
 
 export function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
     log.error("no workspace folders");
     return;
   }
-  const dir = vscode.workspace.workspaceFolders[0].uri.fsPath;
-  logDir = context.globalStorageUri.fsPath;
 
+  const logDir = context.globalStorageUri.fsPath;
   fs.writeFileSync(logDir + "/.revis-version", VERSION);
 
-  //Check if logfile exists and render in consent form otherwise and create logfile
+  //Check if logfile exists, if not create an empty one and render form
   if (!fs.existsSync(logDir + "/log1.json")){
     FormPanel.render();
     fs.writeFileSync(logDir + "/log1.json", "");
   }
-  
-  //set up telemetry and log storage based on settings
-  //default is false
-  if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
-    reporter = new TelemetryReporter(key);
-    context.subscriptions.push(reporter);
 
-    //find how many json files are in folder to determine current log
-    fileCount = fs.readdirSync(logDir)
-      .filter(f => path.extname(f) === ".json").length;
-    logPath = logDir + "/log" + fileCount + ".json";
-
-    stream = fs.createWriteStream(logPath, {flags:'a'});
-    stream.write("{\"new session\"}\n");
-
-    vscode.workspace.openTextDocument(logPath).then((textDocument => {
-      buildCount = textDocument.lineCount;
-    }));
-  }
+  //initialize telemetry reporter
+  let reporter = new TelemetryReporter(key);
+  context.subscriptions.push(reporter);
+  let [logPath, linecnt, stream] = openLog(logDir, false);
 
   //settings.json config to get rustc err code
   const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
@@ -77,62 +55,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
       });
   }
-
-  let timeoutHandle: NodeJS.Timeout | null = null;
-  let lastSuccess = false;
-  let throttleLog = false;
-  context.subscriptions.push(
-    languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor === undefined) {
-        return;
-      }
-      if (timeoutHandle !== null) {
-        clearTimeout(timeoutHandle);
-      }
-      timeoutHandle = setTimeout(() => {
-        saveDiagnostics(editor);
-      }, 200);
-
-      //if logging is enabled, wait 3 seconds for diagnostics to load in
-      if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
-        //on update, wait x seconds for full diagnostics to load in
-        if (!throttleLog && time !== 0){
-          throttleLog = true;
-          time = Math.floor(Date.now() / 1000);
-          let doc = editor.document;
-
-          //filter for only rust errors
-          if (doc.languageId !== "rust") {
-            return false;
-          }
-          timeoutHandle = setTimeout(() => {
-            let diagnostics = languages
-            .getDiagnostics(doc.uri)
-            .filter((d) => {
-              return (
-                //d.source === "rustc" &&
-                d.severity === vscode.DiagnosticSeverity.Error &&
-                typeof d.code === "object" &&
-                typeof d.code.value === "string"
-              );
-            });
-            //if empty and previously didn't compile successfully log empty array
-            if (diagnostics.length === 0 && !lastSuccess){
-              logError(diagnostics, doc, stream, time);
-              lastSuccess = true;
-            }
-            //if not empty, wait until rustc codes generate to log
-            else if (diagnostics.filter(e => e.source === 'rustc').length > 0){
-              logError(diagnostics, doc, stream, time);
-              lastSuccess = false;
-            }
-            throttleLog = false;
-          }, 2000);
-        }
-      }
-    })
-  );
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((e) => {
@@ -154,17 +76,120 @@ export function activate(context: vscode.ExtensionContext) {
       clearAllVisualizations
     )
   );
+
+  let timeoutHandle: NodeJS.Timeout | null = null;
+  context.subscriptions.push(
+    languages.onDidChangeDiagnostics((_: vscode.DiagnosticChangeEvent) => {
+      const editor = vscode.window.activeTextEditor;
+      if (editor === undefined) {
+        return;
+      }
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
+      timeoutHandle = setTimeout(() => {
+        saveDiagnostics(editor);
+      }, 200);
+
+      //if logging is enabled, wait for diagnostics to load in
+      if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
+        let time = Math.floor(Date.now() / 1000);
+        let doc = editor.document;
+        //filter for only rust errors
+        if (doc.languageId !== "rust") {
+          return;
+        }
+        timeoutHandle = setTimeout(() => {
+          logError(stream, doc, time);
+
+          //increase the buildcount and check if divisible by some number
+          linecnt++;
+          console.log(linecnt);
+          if (linecnt % SENDINTERVAL === 0){
+            sendTelemetry(logPath, reporter);
+            if (linecnt > NEWLOGINTERVAL){
+              [logPath, linecnt, stream] = openLog(logDir, true);
+            }
+          }
+        }, 2000);
+      }
+    })
+  );
 }
 
-//create a json object representing current diagnostics and writes to stream, may call sendDiagnostics
-function logError(diagnostics: vscode.Diagnostic[], doc:  vscode.TextDocument, stream: fs.WriteStream, time: number) {
+/**
+ * Initializes a new log file
+ * @param logDir directory for log files
+ * @param newLog if we are creating a new log file
+ * @returns path of current log, line count, and the stream
+ */
+function openLog(logDir: string, newLog: boolean): [string, number, fs.WriteStream]{
+  //find how many json files are in folder to determine current log #
+  let fileCount = fs.readdirSync(logDir)
+    .filter(f => path.extname(f) === ".json").length;
   
+  if (newLog){
+    fileCount++;
+  }
+
+  const logPath = logDir + "/log" + fileCount + ".json";
+
+  if (!newLog){
+    fs.writeFileSync(logPath, "{\"extension reload\"}\n", {flag: 'a'});
+  }
+  else{
+    fs.writeFileSync(logPath, "{\"insert new header here, log: "+ fileCount +"\"}\n", {flag: 'a'});
+  }
+
+  //count lines in current log
+  const linecnt = fs.readFileSync(logPath, 'utf-8').split('\n').length;
+
+  //create new stream
+  const stream = fs.createWriteStream(logPath, {flags: 'a'});
+
+  return [logPath, linecnt, stream];
+}
+
+/**
+ * Sends the log file to the server
+ * @param logPath path of log file
+ * @param reporter telemetry reporter
+ */
+function sendTelemetry(logPath: string, reporter: TelemetryReporter){
+  const data = fs.readFileSync(logPath, 'utf-8');
+  reporter.sendTelemetryEvent('errorLog', {'data': data});
+}
+
+/**
+ * Creates a JSON object for each build and writes it to the log file
+ * @param stream the log file writestream
+ * @param doc the current rust document
+ * @param time to be subtracted from initial time
+ * @returns 
+ */
+function logError(stream: fs.WriteStream, doc:  vscode.TextDocument, time: number){
+
+  let diagnostics = languages
+            .getDiagnostics(doc.uri)
+            .filter((d) => {
+              return (
+                d.severity === vscode.DiagnosticSeverity.Error &&
+                typeof d.code === "object" &&
+                typeof d.code.value === "string"
+              );
+            });
+
+  //if there are errors but none are rustc, return
+  if (diagnostics.length !== 0 && !diagnostics.some(e => e.source === 'rustc')){
+    return;
+  }
+
   //for every error create a JSON object in the errors list
   let errors = [];
   for (const diag of diagnostics) {
     if (diag.code === undefined || typeof diag.code === "number" || typeof diag.code === "string") {
       log.error("unexpected diag.code type", typeof diag.code);
-      return false;
+      return;
     }
     let code = diag.code.value;
 
@@ -195,34 +220,13 @@ function logError(diagnostics: vscode.Diagnostic[], doc:  vscode.TextDocument, s
   stream.write(entry);
   console.log(entry);
   visToggled = false;
-
-  //increase the buildcount and check if divisible by some number
-  buildCount++;
-  console.log(buildCount);
-  if (buildCount % 10 === 0
-      && vscode.workspace.getConfiguration("revis").get("errorLogging")){
-    sendDiagnostics(reporter);
-
-    //create new log file WIP --- need to pass writestream
-    // if (buildCount >= 10){
-    //   fileCount++;
-    //   console.log(fileCount + "sent");
-    //   logPath = logDir + "/log" + fileCount + ".json";
-    //   stream = fs.createWriteStream(logPath, {flags:'a'});
-    //   buildCount = 0;
-    //   stream.write("test");
-    // }
-  }
 }
 
-function sendDiagnostics(reporter: TelemetryReporter){
-  //read file and send
-  const data = fs.readFileSync(logPath, 'utf-8');
-  reporter.sendTelemetryEvent('errorLog', {'data': data });
-}
-
-
-//hashes and truncates strings
+/**
+ * Hashes + truncates strings to 8 characters
+ * @param input string to be hashed
+ * @returns hashed string
+ */
 function hashString(input: string): string {
   const hash = crypto.createHash('sha256');
   hash.update(input);
