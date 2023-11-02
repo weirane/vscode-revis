@@ -34,10 +34,14 @@ export function activate(context: vscode.ExtensionContext) {
     fs.writeFileSync(logDir + "/log1.json", "");
   }
 
-  //initialize telemetry reporter
-  let reporter = new TelemetryReporter(key);
-  context.subscriptions.push(reporter);
-  let [logPath, linecnt, stream] = openLog(logDir, false);
+  //if logging is enabled, initialize reporter, log file, and line count
+  let reporter: TelemetryReporter, logPath: string, linecnt: number, stream: fs.WriteStream, output: vscode.LogOutputChannel;
+  if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
+    reporter = new TelemetryReporter(key);
+    context.subscriptions.push(reporter);
+    [logPath, linecnt, stream] = openLog(logDir, false);
+    output = vscode.window.createOutputChannel("REVIS-logger", {log:true});
+  }
 
   //settings.json config to get rustc err code
   const raconfig = vscode.workspace.getConfiguration("rust-analyzer");
@@ -91,20 +95,16 @@ export function activate(context: vscode.ExtensionContext) {
         saveDiagnostics(editor);
       }, 200);
 
-      //if logging is enabled, wait for diagnostics to load in
-      if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
+      if (vscode.workspace.getConfiguration("revis").get("errorLogging")
+          && stream !== null){
+        //if logging is enabled, wait for diagnostics to load in
         let time = Math.floor(Date.now() / 1000);
-        let doc = editor.document;
-        //filter for only rust errors
-        if (doc.languageId !== "rust") {
-          return;
-        }
         timeoutHandle = setTimeout(() => {
-          logError(stream, doc, time);
+          //log errors
+          logError(stream, editor, time, output);
 
           //increase the buildcount and check if divisible by some number
           linecnt++;
-          console.log(linecnt);
           if (linecnt % SENDINTERVAL === 0){
             sendTelemetry(logPath, reporter);
             if (linecnt > NEWLOGINTERVAL){
@@ -163,11 +163,17 @@ function sendTelemetry(logPath: string, reporter: TelemetryReporter){
 /**
  * Creates a JSON object for each build and writes it to the log file
  * @param stream the log file writestream
- * @param doc the current rust document
+ * @param editor contains the current rust document
  * @param time to be subtracted from initial time
  * @returns 
  */
-function logError(stream: fs.WriteStream, doc:  vscode.TextDocument, time: number){
+function logError(stream: fs.WriteStream, editor: vscode.TextEditor, time: number, output: vscode.LogOutputChannel){
+
+  let doc = editor.document;
+  //filter for only rust errors
+  if (doc.languageId !== "rust") {
+    return;
+  }
 
   let diagnostics = languages
             .getDiagnostics(doc.uri)
@@ -218,7 +224,7 @@ function logError(stream: fs.WriteStream, doc:  vscode.TextDocument, time: numbe
     errors: errors
   }) + '\n';
   stream.write(entry);
-  console.log(entry);
+  output.append(entry);
   visToggled = false;
 }
 
