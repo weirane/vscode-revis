@@ -41,6 +41,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(reporter);
     [logPath, linecnt, stream] = openLog(logDir, false);
     output = vscode.window.createOutputChannel("REVIS-logger", {log:true});
+    //should also check if telemetry is enabled globally
+    //if not, ask user to enable it or disable logging in extension settings
   }
 
   //settings.json config to get rustc err code
