@@ -29,10 +29,10 @@ export function activate(context: vscode.ExtensionContext) {
   fs.writeFileSync(logDir + "/.revis-version", VERSION);
 
   //Check if logfile exists, if not create an empty one and render form
-  if (!fs.existsSync(logDir + "/log1.json")){
-    FormPanel.render();
-    fs.writeFileSync(logDir + "/log1.json", "");
-  }
+  //if (!fs.existsSync(logDir + "/log1.json")){
+    FormPanel.render(context.extensionPath);
+    //fs.writeFileSync(logDir + "/log1.json", "");
+  //}
 
   //if logging is enabled, initialize reporter, log file, and line count
   let reporter: TelemetryReporter, logPath: string, linecnt: number, stream: fs.WriteStream, output: vscode.LogOutputChannel;
@@ -41,6 +41,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(reporter);
     [logPath, linecnt, stream] = openLog(logDir, false);
     output = vscode.window.createOutputChannel("REVIS-logger", {log:true});
+    //should also check if telemetry is enabled globally
+    //if not, ask user to enable it or disable logging in extension settings
   }
 
   //settings.json config to get rustc err code
@@ -131,7 +133,6 @@ function openLog(logDir: string, newLog: boolean): [string, number, fs.WriteStre
   if (newLog){
     fileCount++;
   }
-
   const logPath = logDir + "/log" + fileCount + ".json";
 
   if (!newLog){
@@ -165,7 +166,6 @@ function sendTelemetry(logPath: string, reporter: TelemetryReporter){
  * @param stream the log file writestream
  * @param editor contains the current rust document
  * @param time to be subtracted from initial time
- * @returns 
  */
 function logError(stream: fs.WriteStream, editor: vscode.TextEditor, time: number, output: vscode.LogOutputChannel){
 
