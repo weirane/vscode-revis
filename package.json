@@ -21,7 +21,7 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "seenform" : false,
+    "seenform": false,
     "commands": [
       {
         "command": "revis.toggleVisualization",
@@ -91,7 +91,7 @@
   },
   "dependencies": {
     "@svgdotjs/svg.js": "^3.1.2",
-    "@vscode/extension-telemetry": "^0.8.2",
+    "@vscode/extension-telemetry": "^0.8.5",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "jsdom": "^21.1.0",
     "svgdom": "^0.1.13",
