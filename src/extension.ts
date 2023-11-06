@@ -18,8 +18,10 @@ const NEWLOGINTERVAL = 1000;
 const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
 let visToggled = false;
+let enableRevis = true;
 
 export function activate(context: vscode.ExtensionContext) {
+  FormPanel.render(context.extensionPath);
   if (!vscode.workspace.workspaceFolders) {
     log.error("no workspace folders");
     return;
@@ -30,7 +32,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   //Check if logfile exists, if not create an empty one and render form
   //if (!fs.existsSync(logDir + "/log1.json")){
-    FormPanel.render(context.extensionPath);
+    //FormPanel.render(context.extensionPath);
     //fs.writeFileSync(logDir + "/log1.json", "");
   //}
 
@@ -39,8 +41,20 @@ export function activate(context: vscode.ExtensionContext) {
   if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
     reporter = new TelemetryReporter(key);
     context.subscriptions.push(reporter);
+
+    if(fs.existsSync(logDir + "revisStudy.txt")){
+      const endDate = fs.readFileSync(logDir + "revisStudy.txt");
+      if (Date.now() < parseInt(endDate.toString())){
+        enableRevis = false;
+      }
+      else{
+        fs.unlinkSync(logDir + "revisStudy.txt");
+      }
+    }
+
     [logPath, linecnt, stream] = openLog(logDir, false);
     output = vscode.window.createOutputChannel("REVIS-logger", {log:true});
+
     //should also check if telemetry is enabled globally
     //if not, ask user to enable it or disable logging in extension settings
   }
@@ -67,7 +81,9 @@ export function activate(context: vscode.ExtensionContext) {
       if (e === undefined) {
         return;
       }
-      saveDiagnostics(e);
+      if (enableRevis){
+        saveDiagnostics(e);
+      }
     })
   );
   context.subscriptions.push(
@@ -120,6 +136,29 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 /**
+ * Generates a UUID for the user and
+ * generates a file to randomly determine if errorviz is activated or not
+ * @returns UUID
+ */
+function initStudy(logPath: String): string{
+  //generate UUID
+  const uuid = crypto.randomBytes(16).toString('hex');
+
+  //generate 50/50 chance of revis being active
+  const rand = Math.floor(Math.random());
+  if (rand < 0.5){
+    //deactivate errorviz, set date to reactivate 2 weeks from now
+    fs.writeFileSync(logPath + "revisStudy.txt", Date.now().toString() + 1209600000);
+  }
+  else{
+    //keep errorviz active
+    fs.writeFileSync(logPath + "revisStudy.txt", "0");
+  }
+
+  return uuid;
+}
+
+/**
  * Initializes a new log file
  * @param logDir directory for log files
  * @param newLog if we are creating a new log file
@@ -136,7 +175,7 @@ function openLog(logDir: string, newLog: boolean): [string, number, fs.WriteStre
   const logPath = logDir + "/log" + fileCount + ".json";
 
   if (!newLog){
-    fs.writeFileSync(logPath, "{\"extension reload\"}\n", {flag: 'a'});
+    fs.writeFileSync(logPath, "{\"extension reload, revis enabled:" + enableRevis + "\"}\n", {flag: 'a'});
   }
   else{
     fs.writeFileSync(logPath, "{\"insert new header here, log: "+ fileCount +"\"}\n", {flag: 'a'});
