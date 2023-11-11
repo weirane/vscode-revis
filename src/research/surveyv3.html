@@ -31,9 +31,9 @@ body {
 
 <script type="text/javascript">
     
-    function checkvalueGender(val) {
-        var element=document.getElementById('gender');
-        if(val=="4")
+    function checkvalueIndustry(val) {
+        var element=document.getElementById('industry');
+        if(val=="Other")
             element.style.display='inline';
         else
             element.style.display='none';
@@ -82,42 +82,24 @@ body {
 
     <div id="questions">
         <p>What other programming languages do you have experience in?</p>
-        <input type="radio" id="javanovice" name="java" value="javanovice">
-        <label for="javanovice">Java (Novice)</label>
+
+        <input type="checkbox" id="python" name="python" value="python">
+        <label for="python">The Rust Programming Language textbook</label>
         <br></br>
-        <input type="radio" id="javainter" name="java" value="javainter">
-        <label for="javainter">Java (Intermediate)</label>
+        <input type="checkbox" id="java" name="java" value="java">
+        <label for="java">Java</label>
         <br></br>
-        <input type="radio" id="javaexpert" name="java" value="javaexpert">
-        <label for="javaexpert">Java (Expert)</label>
-        <br></br><br>
-        <input type="radio" id="jsnovice" name="javascript" value="jsnovice">
-        <label for="jsnovice">JavaScript (Novice)</label>
+        <input type="checkbox" id="go" name="go" value="go">
+        <label for="go">Go</label>
         <br></br>
-        <input type="radio" id="jsinter" name="javascript" value="jsinter">
-        <label for="jsinter">JavaScript (Intermediate)</label>
+        <input type="checkbox" id="c++" name="c++" value="c++">
+        <label for="c++">C++</label>
         <br></br>
-        <input type="radio" id="jsexpert" name="javascript" value="jsexpert">
-        <label for="jsexpert">JavaScript (Expert)</label>
-        <br></br><br>
-        <input type="radio" id="cnovice" name="clang" value="cnovice">
-        <label for="cnovice">C (Novice)</label>
+        <input type="checkbox" id="langother" name="langother" value="langother" 
+        onchange='checkvalue(this.value, "langother", "langbox");'>
+        <label for="langother">Other</label>
         <br></br>
-        <input type="radio" id="cinter" name="clang" value="cinter">
-        <label for="cinter">C (Intermediate)</label>
-        <br></br>
-        <input type="radio" id="cexpert" name="clang" value="cexpert">
-        <label for="cexpert">C (Expert)</label>
-        <br></br><br>
-        <input type="radio" id="pythonnovice" name="python" value="pythonnovice">
-        <label for="pythonnovice">Python (Novice)</label>
-        <br></br>
-        <input type="radio" id="pythoninter" name="python" value="pythoninter">
-        <label for="pythoninter">Python (Intermediate)</label>
-        <br></br>
-        <input type="radio" id="pythonexpert" name="python" value="pythonexpert">
-        <label for="pythonexpert">Python (Expert)</label>
-        <br></br>
+        <input type="text" name="langbox" id="langbox" style="display:none;"/>
     </div>
         
     <div id="questions">
@@ -132,9 +114,11 @@ body {
         <input type="checkbox" id="resources3" name="resources3" value="StackOverflow">
         <label for="resources3">Stack Overflow</label>
         <br></br>
-        <input type="checkbox" id="resources4" name="resources4" value="Other">
+        <input type="checkbox" id="resources4" name="resources4" value="Other" 
+        onchange='checkvalue(this.value, "resources4", "resourcesbox");'>
         <label for="resources4">Other</label>
         <br></br>
+        <input type="text" name="resourcesbox" id="resourcesbox" style="display:none;"/>
     </div>
 
     <div id="questions">
@@ -154,17 +138,19 @@ body {
 
     <div id="questions">
         <p>What industry do you work in?</p>
-        <select name = "industry" id = "industry">
+        <select name = "industry" onchange='checkvalueIndustry(this.value);'>
             <option value="Select">Select</option>
             <option value="Academia">Academia</option>
             <option value="Industry">Industry</option>
             <option value="Other">Other</option>
         </select>
+        <br></br>
+        <input type="text" name="industry" id="industry" style="display:none;"/>
     </div>
 
     <div id="questions">
         <p>Please specify the gender with which you most closely identify:</p>
-        <select name = "gender" onchange='checkvalueGender(this.value);'>
+        <select name = "gender" id = "gender">
             <option value = -1>Select</option>
             <option value = 0>Woman</option>
             <option value = 1>Man</option>
@@ -172,8 +158,6 @@ body {
             <option value = 3>Prefer not to answer</option>
             <option value = 4>Prefer to self-describe</option>
         </select>
-        <br></br>
-        <input type="text" name="gender" id="gender" style="display:none;"/>
     </div>
 
     <div id="questions">
