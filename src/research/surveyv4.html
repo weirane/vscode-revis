@@ -82,52 +82,52 @@ body {
 
     <div id="questions">
         <p>What other programming languages do you have experience in?</p>
-        <input type="radio" id="java" name="java" value="javanone">
+        <input type="radio" id="javanone" name="java" value="javanone">
         <label for="javanone">Java (None)</label>
         <br></br>
-        <input type="radio" id="java" name="java" value="javanovice">
+        <input type="radio" id="javanovice" name="java" value="javanovice">
         <label for="javanovice">Java (Novice)</label>
         <br></br>
-        <input type="radio" id="java" name="java" value="javainter">
+        <input type="radio" id="javainter" name="java" value="javainter">
         <label for="javainter">Java (Intermediate)</label>
         <br></br>
-        <input type="radio" id="java" name="java" value="javaexpert">
+        <input type="radio" id="javaexpert" name="java" value="javaexpert">
         <label for="javaexpert">Java (Expert)</label>
         <br></br><br>
-        <input type="radio" id="javascript" name="javascript" value="jsnone">
+        <input type="radio" id="jsnone" name="javascript" value="jsnone">
         <label for="jsnone">JavaScript (None)</label>
         <br></br>
-        <input type="radio" id="javascript" name="javascript" value="jsnovice">
+        <input type="radio" id="jsnovice" name="javascript" value="jsnovice">
         <label for="jsnovice">JavaScript (Novice)</label>
         <br></br>
-        <input type="radio" id="javascript" name="javascript" value="jsinter">
+        <input type="radio" id="jsinter" name="javascript" value="jsinter">
         <label for="jsinter">JavaScript (Intermediate)</label>
         <br></br>
-        <input type="radio" id="javascript" name="javascript" value="jsexpert">
+        <input type="radio" id="jsexpert" name="javascript" value="jsexpert">
         <label for="jsexpert">JavaScript (Expert)</label>
         <br></br><br>
-        <input type="radio" id="clang" name="clang" value="cnone">
+        <input type="radio" id="cnone" name="clang" value="cnone">
         <label for="cnone">C (None)</label>
         <br></br>
-        <input type="radio" id="clang" name="clang" value="cnovice">
+        <input type="radio" id="cnovice" name="clang" value="cnovice">
         <label for="cnovice">C (Novice)</label>
         <br></br>
-        <input type="radio" id="clang" name="clang" value="cinter">
+        <input type="radio" id="cinter" name="clang" value="cinter">
         <label for="cinter">C (Intermediate)</label>
         <br></br>
-        <input type="radio" id="clang" name="clang" value="cexpert">
+        <input type="radio" id="cexpert" name="clang" value="cexpert">
         <label for="cexpert">C (Expert)</label>
         <br></br><br>
-        <input type="radio" id="python" name="python" value="pythonnone">
+        <input type="radio" id="pythonnone" name="python" value="pythonnone">
         <label for="pythonnone">Python (None)</label>
         <br></br>
-        <input type="radio" id="python" name="python" value="pythonnovice">
+        <input type="radio" id="pythonnovice" name="python" value="pythonnovice">
         <label for="pythonnovice">Python (Novice)</label>
         <br></br>
-        <input type="radio" id="python" name="python" value="pythoninter">
+        <input type="radio" id="pythoninter" name="python" value="pythoninter">
         <label for="pythoninter">Python (Intermediate)</label>
         <br></br>
-        <input type="radio" id="python" name="python" value="pythonexpert">
+        <input type="radio" id="pythonexpert" name="python" value="pythonexpert">
         <label for="pythonexpert">Python (Expert)</label>
         <br></br>
     </div>
@@ -176,7 +176,7 @@ body {
 
     <div id="questions">
         <p>Please specify the gender with which you most closely identify:</p>
-        <select name = "gender" id = "gender" onchange='checkvalueGender(this.value);'>
+        <select name = "gender" onchange='checkvalueGender(this.value);'>
             <option value = -1>Select</option>
             <option value = 0>Woman</option>
             <option value = 1>Man</option>
@@ -190,7 +190,7 @@ body {
 
     <div id="questions">
         <p>What is your age?</p>
-        <select name = "age" id = "age">
+        <select name = "rustExp" id = "rustExp">
             <option value = -1>Select</option>
             <option value = 0>18-22</option>
             <option value = 1>23-30</option>
@@ -219,55 +219,10 @@ body {
 
     <br></br>
     <div style="text-align: center;">
-        <button id = "submit">Submit</button>
+        <button>Submit</button>
     </div>
 </div>
+</body>
 
-<script>
-    document.getElementById('submit').addEventListener("click", () => {
-        //checking rustExp - how long they've been programming in Rust
-        if(document.getElementById("rustExp").value==-1){
-            window.alert("Please tell us how long you've been programming in Rust.");
-        }
-        //checking java, javascript, clang, and python - what programming languages they have experience in
-        else if(document.querySelector('input[name="java"]:checked')==null
-        || document.querySelector('input[name="javascript"]:checked')==null
-        || document.querySelector('input[name="clang"]:checked')==null
-        || document.querySelector('input[name="python"]:checked')==null){
-            window.alert("Please tell us what programming languages you have experience in.");
-        }
-        //checking resources - what resources they used to learn Rust
-        else if(!(document.getElementById("resources1").checked
-        ||document.getElementById("resources2").checked
-        ||document.getElementById("resources3").checked
-        ||document.getElementById("resources4").checked)) {
-            window.alert("Please tell us how you learned Rust.");
-        }
-        //checking linesOfCode - how many lines of code they have written
-        else if(document.getElementById("linesOfCode").value==-1){
-            window.alert("Please tell us how many lines of code you've written in Rust.");
-        }
-        //checking industry
-        else if(document.getElementById("industry").value=="Select"){
-            window.alert("Please select your industry.");
-        }
-        //checking gender
-        else if(document.getElementById("gender").value==-1){
-            window.alert("Please select your gender.");
-        }
-        //checking age
-        else if(document.getElementById("age").value==-1){
-            window.alert("Please select your age.");
-        }
-        //checking degree
-        else if(document.getElementById("degree").value==-1){
-            window.alert("Please select your level of education.");
-        }
-        else{
-            //close webview, move onto thank you page
-            window.location.replace("thankyoumessage.html");
-        }
-    });
-</script>
-
+</body>
 </html>

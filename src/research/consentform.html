@@ -128,7 +128,7 @@
             </ul>
             <b>18.	Additional Choices to Consider</b>
             <br/><br/>
-            We would like to offer the opportunity to receive general results of the research and relevant individual results. You may also change your mind about this choice.  Please initial your choice below:
+            We would like to offer the opportunity to receive general results of the research and relevant individual results. You may also change your mind about this choice.  Please select your choice below:
             <br/><br/>
             <input type="radio" id="yessum" name="summaryagreement" value="Yes">
             <label for="yessum">YES, send me a summary of the research results and my individual results.</label>
@@ -181,6 +181,13 @@
             <br>
         </form>
 
+        <h3>Age Confirmation</h3>
+        <form>
+            <input type="radio" id="ageconf" name="ageconf" value="yes">
+            <label for="ageconf">By clicking this, I confirm that I am 18 or older and can legally participate in this study.</label>
+            <br>
+        </form>
+
         <h3>Signature Block for Adults Able to Provide Consent</h3>
         I have received a copy of this consent document and a copy of the “Experimental Participant's Bill of Rights” to keep.  I agree to participate in the research described in this form.
 
@@ -202,7 +209,27 @@
 
         <script>
         document.getElementById('submit').addEventListener("click", () => {
-            if (document.getElementById("agree").value === "yes"){
+            //checking section 18 radio buttons
+            if(document.querySelector('input[name="summaryagreement"]:checked')==null){
+                window.alert("Please fill in the email summary consent in Section 18.");
+            }
+            //checking section 18 radio buttons
+            else if(document.querySelector('input[name="contactagreement"]:checked')==null){
+                window.alert("Please fill in contact permissions in Section 18.");
+            }
+            //checking if they agreed to participate or not
+            else if(document.querySelector('input[name="agreement"]:checked')==null) {
+                window.alert("Please select an option for Participation Agreement.");
+            }
+            //checking the over 18 radio button
+            else if(document.querySelector('input[name="ageconf"]:checked')==null) {
+                window.alert("Please confirm you are over 18.");
+            }
+            //checking they signed their name
+            else if(document.getElementById("participantname").value=="") {
+                window.alert("Please sign your name.");
+            }
+            else if (document.getElementById("agree").value === "yes"){
                 //record content
                 //move on to survey
             }
