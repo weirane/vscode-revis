@@ -13,7 +13,7 @@ export class FormPanel {
     private constructor(panel: vscode.WebviewPanel, path: string) {
       this._panel = panel;
       this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-      this._panel.webview.html = this.getSurvey(path);
+      this._panel.webview.html = this.getConsentForm(path);
     }
 
     public static render(path: string){
@@ -49,6 +49,11 @@ export class FormPanel {
 
     private getSurvey(path: string) {
         let html = fs.readFileSync(path + "/src/research/survey.html", 'utf8');
+        return html;
+    }
+
+    private getConsentForm(path: string) {
+        let html = fs.readFileSync(path + "/src/research/consentform.html", 'utf8');
         return html;
     }
 }

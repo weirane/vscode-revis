@@ -1,11 +1,11 @@
 {
   "name": "errorviz",
   "publisher": "weirane",
-  "displayName": "REVIS",
+  "displayName": "SALT",
   "icon": "assets/errorviz-256x256.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/weirane/vscode-revis"
+    "url": "https://github.com/mojeanmac/vscode-salt"
   },
   "description": "Visualize lifetime-related Rust compiler errors",
   "version": "0.1.3",
@@ -24,16 +24,16 @@
     "seenform": false,
     "commands": [
       {
-        "command": "revis.toggleVisualization",
-        "title": "revis: Toggle Visualization"
+        "command": "SALT.toggleVisualization",
+        "title": "SALT: Toggle Visualization"
       },
       {
-        "command": "revis.clearAllVisualizations",
-        "title": "revis: Clear All Visualizations"
+        "command": "SALT.clearAllVisualizations",
+        "title": "SALT: Clear All Visualizations"
       },
       {
-        "command": "revis.researchParticipation",
-        "title": "revis: View Consent to Participate in Research"
+        "command": "SALT.researchParticipation",
+        "title": "SALT: View Consent to Participate in Research"
       }
     ],
     "keybindings": [
@@ -41,19 +41,19 @@
         "key": "ctrl+shift+v",
         "mac": "cmd+shift+v",
         "when": "editorTextFocus && editorLangId == 'rust'",
-        "command": "revis.toggleVisualization"
+        "command": "SALT.toggleVisualization"
       },
       {
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
         "when": "editorLangId == 'rust'",
-        "command": "revis.researchParticipation"
+        "command": "SALT.researchParticipation"
       }
     ],
     "configuration": {
-      "title": "revis",
+      "title": "SALT",
       "properties": {
-        "revis.errorLogging": {
+        "SALT.errorLogging": {
           "type": "boolean",
           "default": "false",
           "description": "Enable the recording and sending of error logs for academic research (must agree to consent form before enabled)."
@@ -90,6 +90,7 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.450.0",
     "@svgdotjs/svg.js": "^3.1.2",
     "@vscode/extension-telemetry": "^0.8.5",
     "@vscode/webview-ui-toolkit": "^1.2.2",

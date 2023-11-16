@@ -6,6 +6,7 @@ import { codeFuncMap } from "./visualizations";
 import * as fs from "fs";
 import * as path from "path";
 import TelemetryReporter from '@vscode/extension-telemetry';
+import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 import { FormPanel } from "./research/form";
 import * as crypto from 'crypto';
 
@@ -28,7 +29,6 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   const logDir = context.globalStorageUri.fsPath;
-  fs.writeFileSync(logDir + "/.revis-version", VERSION);
 
   //Check if logfile exists, if not create an empty one and render form
   //if (!fs.existsSync(logDir + "/log1.json")){
@@ -38,13 +38,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   //if logging is enabled, initialize reporter, log file, and line count
   let reporter: TelemetryReporter, logPath: string, linecnt: number, stream: fs.WriteStream, output: vscode.LogOutputChannel;
-  if (vscode.workspace.getConfiguration("revis").get("errorLogging")){
+  if (vscode.workspace.getConfiguration("SALT").get("errorLogging")){
     reporter = new TelemetryReporter(key);
     context.subscriptions.push(reporter);
 
     if(fs.existsSync(logDir + "revisStudy.txt")){
       const endDate = fs.readFileSync(logDir + "revisStudy.txt");
-      if (Date.now() < parseInt(endDate.toString())){
+      if (Date.now() < parseInt(endDate.toString()) + 1209600000){
         enableRevis = false;
       }
       else{
@@ -53,7 +53,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     [logPath, linecnt, stream] = openLog(logDir, false);
-    output = vscode.window.createOutputChannel("REVIS-logger", {log:true});
+    output = vscode.window.createOutputChannel("SALT-logger", {log:true});
 
     //should also check if telemetry is enabled globally
     //if not, ask user to enable it or disable logging in extension settings
@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
   if (!useRustcErrorCode) {
     vscode.window
       .showWarningMessage(
-        "revis wants to set `rust-analyzer.diagnostics.useRustcErrorCode` to true in settings.json.",
+        "SALT wants to set `rust-analyzer.diagnostics.useRustcErrorCode` to true in settings.json.",
         "Allow",
         "I'll do it myself"
       )
@@ -87,14 +87,14 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
   context.subscriptions.push(
-    vscode.commands.registerTextEditorCommand("revis.toggleVisualization", toggleVisualization)
+    vscode.commands.registerTextEditorCommand("SALT.toggleVisualization", toggleVisualization)
   );
   context.subscriptions.push(
-    vscode.commands.registerCommand("revis.researchParticipation", FormPanel.render)
+    vscode.commands.registerCommand("SALT.researchParticipation", FormPanel.render)
   );
   context.subscriptions.push(
     vscode.commands.registerTextEditorCommand(
-      "revis.clearAllVisualizations",
+      "SALT.clearAllVisualizations",
       clearAllVisualizations
     )
   );
@@ -113,7 +113,7 @@ export function activate(context: vscode.ExtensionContext) {
         saveDiagnostics(editor);
       }, 200);
 
-      if (vscode.workspace.getConfiguration("revis").get("errorLogging")
+      if (vscode.workspace.getConfiguration("SALT").get("errorLogging")
           && stream !== null){
         //if logging is enabled, wait for diagnostics to load in
         let time = Math.floor(Date.now() / 1000);
@@ -137,7 +137,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 /**
  * Generates a UUID for the user and
- * generates a file to randomly determine if errorviz is activated or not
+ * generates a file to randomly determine if revis is activated or not
  * @returns UUID
  */
 function initStudy(logPath: String): string{
@@ -147,11 +147,11 @@ function initStudy(logPath: String): string{
   //generate 50/50 chance of revis being active
   const rand = Math.floor(Math.random());
   if (rand < 0.5){
-    //deactivate errorviz, set date to reactivate 2 weeks from now
-    fs.writeFileSync(logPath + "revisStudy.txt", Date.now().toString() + 1209600000);
+    //deactivate revis, set date to reactivate 2 weeks from now
+    fs.writeFileSync(logPath + "revisStudy.txt", Date.now().toString());
   }
   else{
-    //keep errorviz active
+    //keep revis active
     fs.writeFileSync(logPath + "revisStudy.txt", "0");
   }
 
