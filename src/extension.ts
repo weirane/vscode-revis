@@ -22,7 +22,6 @@ let visToggled = false;
 let enableRevis = true;
 
 export function activate(context: vscode.ExtensionContext) {
-  FormPanel.render(context.extensionPath);
   if (!vscode.workspace.workspaceFolders) {
     log.error("no workspace folders");
     return;
@@ -32,13 +31,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   //Check if logfile exists, if not create an empty one and render form
   //if (!fs.existsSync(logDir + "/log1.json")){
-    //FormPanel.render(context.extensionPath);
+    FormPanel.render(context.extensionPath + "/src/research/survey.html");
     //fs.writeFileSync(logDir + "/log1.json", "");
   //}
 
   //if logging is enabled, initialize reporter, log file, and line count
   let reporter: TelemetryReporter, logPath: string, linecnt: number, stream: fs.WriteStream, output: vscode.LogOutputChannel;
-  if (vscode.workspace.getConfiguration("SALT").get("errorLogging")){
+  if (vscode.workspace.getConfiguration("salt").get("errorLogging")){
     reporter = new TelemetryReporter(key);
     context.subscriptions.push(reporter);
 
@@ -87,14 +86,16 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
   context.subscriptions.push(
-    vscode.commands.registerTextEditorCommand("SALT.toggleVisualization", toggleVisualization)
+    vscode.commands.registerTextEditorCommand("salt.toggleVisualization", toggleVisualization)
   );
+  //command not working
   context.subscriptions.push(
-    vscode.commands.registerCommand("SALT.researchParticipation", FormPanel.render)
+    vscode.commands.registerCommand("salt.researchParticipation", FormPanel.render)
+
   );
   context.subscriptions.push(
     vscode.commands.registerTextEditorCommand(
-      "SALT.clearAllVisualizations",
+      "salt.clearAllVisualizations",
       clearAllVisualizations
     )
   );
@@ -113,7 +114,7 @@ export function activate(context: vscode.ExtensionContext) {
         saveDiagnostics(editor);
       }, 200);
 
-      if (vscode.workspace.getConfiguration("SALT").get("errorLogging")
+      if (vscode.workspace.getConfiguration("salt").get("errorLogging")
           && stream !== null){
         //if logging is enabled, wait for diagnostics to load in
         let time = Math.floor(Date.now() / 1000);

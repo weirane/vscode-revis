@@ -24,15 +24,15 @@
     "seenform": false,
     "commands": [
       {
-        "command": "SALT.toggleVisualization",
+        "command": "salt.toggleVisualization",
         "title": "SALT: Toggle Visualization"
       },
       {
-        "command": "SALT.clearAllVisualizations",
+        "command": "salt.clearAllVisualizations",
         "title": "SALT: Clear All Visualizations"
       },
       {
-        "command": "SALT.researchParticipation",
+        "command": "salt.researchParticipation",
         "title": "SALT: View Consent to Participate in Research"
       }
     ],
@@ -41,19 +41,19 @@
         "key": "ctrl+shift+v",
         "mac": "cmd+shift+v",
         "when": "editorTextFocus && editorLangId == 'rust'",
-        "command": "SALT.toggleVisualization"
+        "command": "salt.toggleVisualization"
       },
       {
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
         "when": "editorLangId == 'rust'",
-        "command": "SALT.researchParticipation"
+        "command": "salt.researchParticipation"
       }
     ],
     "configuration": {
       "title": "SALT",
       "properties": {
-        "SALT.errorLogging": {
+        "salt.errorLogging": {
           "type": "boolean",
           "default": "false",
           "description": "Enable the recording and sending of error logs for academic research (must agree to consent form before enabled)."
