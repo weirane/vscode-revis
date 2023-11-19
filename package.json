@@ -56,7 +56,7 @@
         "salt.errorLogging": {
           "type": "boolean",
           "default": "false",
-          "description": "Enable the recording and sending of error logs for academic research. You must agree to the consent form first for it to go into effect. Disabling this will opt you out of the study."
+          "description": "Enable the recording and sending of error logs for academic research. You must agree to the consent form for it to go into effect. Disabling this will opt you out of the study."
         }
       }
     }

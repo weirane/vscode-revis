@@ -153,26 +153,24 @@ function renderConsentForm(context: vscode.ExtensionContext){
     }
   );
   
-  const path = context.extensionPath;
-  const logDir = context.globalStorageUri.fsPath;
-
-  panel.webview.html = fs.readFileSync(path + "/src/research/consentForm.html", 'utf8');
+  panel.webview.html = fs.readFileSync(context.extensionPath + "/src/research/consentForm.html", 'utf8');
 
   panel.webview.onDidReceiveMessage(
     message => {
       if (message.text === "yes"){
         context.globalState.update("participation", true);
         initStudy(context);
+        renderSurvey(context);
       }
       else {
         context.globalState.update("participation", false);
       }
-      //panel.dispose(); //TODO: actually close the panel
+      panel.dispose();
     }
   );
 }
 
-function renderSurvey(path: string){
+function renderSurvey(context: vscode.ExtensionContext){
   const panel = vscode.window.createWebviewPanel(
     'form',
     'SALT Survey',
@@ -180,9 +178,10 @@ function renderSurvey(path: string){
     {
       enableScripts: true
     }
+        
   );
-
-  panel.webview.html = fs.readFileSync(path + "/src/research/survey.html", 'utf8');
+  
+  panel.webview.html = fs.readFileSync(context.extensionPath + "/src/research/survey.html", 'utf8');
 
 }
 
@@ -206,7 +205,7 @@ function initStudy(context: vscode.ExtensionContext){
   }
 
   //generate first log file
-  fs.writeFileSync(logDir + "/log1.json", JSON.stringify({uuid: uuid, logCount: 1}) + '\n', {flag: 'a'});
+  fs.writeFileSync(logDir + "/log1.json", JSON.stringify({uuid: uuid, logCount: 1, studyEnabled: enableExt}) + '\n', {flag: 'a'});
   //set config to enable logging
   vscode.workspace.getConfiguration("salt").update("errorLogging", true);
 }
@@ -228,11 +227,11 @@ function openLog(logDir: string, uuid: string): [string, number, fs.WriteStream]
   }
   const logPath = logDir + "/log" + fileCount + ".json";
   if (uuid !== ""){
-    fs.writeFileSync(logPath, JSON.stringify({uuid: uuid, logCount: fileCount}) + '\n', {flag: 'a'});
+    fs.writeFileSync(logPath, JSON.stringify({uuid: uuid, logCount: fileCount, studyEnabled: enableExt}) + '\n', {flag: 'a'});
   }
   else{
-    fs.writeFileSync(logPath, "{extension reload, "
-      + JSON.stringify({studyEnabled: enableExt}) + "}\n", {flag: 'a'});
+    fs.writeFileSync(logPath, ""
+      + JSON.stringify({extensionReload: {studyEnabled: enableExt}}) + "\n", {flag: 'a'});
   }
 
   //count lines in current log
