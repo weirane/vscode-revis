@@ -12,6 +12,7 @@ import * as crypto from 'crypto';
 
 
 const VERSION = "0.1.1";
+const STUDY = "revis";
 let intervalHandle: number | null = null;
 
 const SENDINTERVAL = 100;
@@ -19,7 +20,7 @@ const NEWLOGINTERVAL = 1000;
 const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
 let visToggled = false;
-let enableRevis = true;
+let enableExt = true;
 
 export function activate(context: vscode.ExtensionContext) {
   if (!vscode.workspace.workspaceFolders) {
@@ -29,31 +30,38 @@ export function activate(context: vscode.ExtensionContext) {
 
   const logDir = context.globalStorageUri.fsPath;
 
-  //Check if logfile exists, if not create an empty one and render form
-  //if (!fs.existsSync(logDir + "/log1.json")){
-  renderForm(context.extensionPath + "/src/research/consentForm.html");
-    //fs.writeFileSync(logDir + "/log1.json", "");
+  //have they given an answer to the current consent form?
+  //if not, render it!
+  //if (context.globalState.get("participation") === undefined){
+    renderConsentForm(context);
+    console.log(context.globalState.get("participation"));
   //}
 
   //if logging is enabled, initialize reporter, log file, and line count
-  let reporter: TelemetryReporter, logPath: string, linecnt: number, stream: fs.WriteStream, output: vscode.LogOutputChannel;
-  if (vscode.workspace.getConfiguration("salt").get("errorLogging")){
+  let reporter: TelemetryReporter, logPath: string, linecnt: number,
+      stream: fs.WriteStream, output: vscode.LogOutputChannel, uuid: string;
+  if (vscode.workspace.getConfiguration("salt").get("errorLogging")
+      && context.globalState.get("participation") === true){
     reporter = new TelemetryReporter(key);
     context.subscriptions.push(reporter);
 
-    if(fs.existsSync(logDir + "revisStudy.txt")){
-      const endDate = fs.readFileSync(logDir + "revisStudy.txt");
-      if (Date.now() < parseInt(endDate.toString()) + 1209600000){
-        enableRevis = false;
+    //disable tool if still in study period
+    if (context.globalState.get("startDisable") !== undefined){
+      let startDisable = context.globalState.get("startDisable");
+      if (typeof startDisable === 'number' && Date.now() < startDisable + 1209600000){
+        enableExt = false;
       }
-      else{
-        fs.unlinkSync(logDir + "revisStudy.txt");
+      else {
+        context.globalState.update("startDisable", undefined);
       }
     }
 
-    [logPath, linecnt, stream] = openLog(logDir, false);
+    [logPath, linecnt, stream] = openLog(logDir, "");
     output = vscode.window.createOutputChannel("SALT-logger", {log:true});
-
+    
+    if (typeof context.globalState.get("uuid") === "string"){
+      uuid = context.globalState.get("uuid") as string;
+    }
     //should also check if telemetry is enabled globally
     //if not, ask user to enable it or disable logging in extension settings
   }
@@ -80,7 +88,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (e === undefined) {
         return;
       }
-      if (enableRevis){
+      if (enableExt){
         saveDiagnostics(e);
       }
     })
@@ -88,7 +96,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerTextEditorCommand("salt.toggleVisualization", toggleVisualization)
   );
-  //command not working
+  //instead, render a copy of the consent form
   // context.subscriptions.push(
   //   vscode.commands.registerCommand("salt.researchParticipation", FormPanel.render)
   // );
@@ -114,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
       }, 200);
 
       if (vscode.workspace.getConfiguration("salt").get("errorLogging")
-          && stream !== null){
+          && context.globalState.get("participation") === true && stream !== null){
         //if logging is enabled, wait for diagnostics to load in
         let time = Math.floor(Date.now() / 1000);
         timeoutHandle = setTimeout(() => {
@@ -126,7 +134,7 @@ export function activate(context: vscode.ExtensionContext) {
           if (linecnt % SENDINTERVAL === 0){
             sendTelemetry(logPath, reporter);
             if (linecnt > NEWLOGINTERVAL){
-              [logPath, linecnt, stream] = openLog(logDir, true);
+              [logPath, linecnt, stream] = openLog(logDir, uuid);
             }
           }
         }, 2000);
@@ -135,7 +143,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-function renderForm(path: string){
+function renderConsentForm(context: vscode.ExtensionContext){
   const panel = vscode.window.createWebviewPanel(
     'form',
     'Consent Form',
@@ -144,60 +152,87 @@ function renderForm(path: string){
       enableScripts: true
     }
   );
+  
+  const path = context.extensionPath;
+  const logDir = context.globalStorageUri.fsPath;
 
-  panel.webview.html = fs.readFileSync(path, 'utf8');
+  panel.webview.html = fs.readFileSync(path + "/src/research/consentForm.html", 'utf8');
 
   panel.webview.onDidReceiveMessage(
     message => {
-      console.log(message);
+      if (message.text === "yes"){
+        context.globalState.update("participation", true);
+        initStudy(context);
+      }
+      else {
+        context.globalState.update("participation", false);
+      }
+      //panel.dispose(); //TODO: actually close the panel
     }
   );
 }
 
+function renderSurvey(path: string){
+  const panel = vscode.window.createWebviewPanel(
+    'form',
+    'SALT Survey',
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true
+    }
+  );
+
+  panel.webview.html = fs.readFileSync(path + "/src/research/survey.html", 'utf8');
+
+}
+
 /**
- * Generates a UUID for the user and
- * generates a file to randomly determine if revis is activated or not
- * @returns UUID
+ * Generates a UUID for the user and generates a file to randomly
+ * determine if revis is activated or not
  */
-function initStudy(logPath: String): string{
+function initStudy(context: vscode.ExtensionContext){
+  const logDir = context.globalStorageUri.fsPath;
+
   //generate UUID
   const uuid = crypto.randomBytes(16).toString('hex');
+  //write UUID to global state
+  context.globalState.update("uuid", uuid);
 
   //generate 50/50 chance of revis being active
   const rand = Math.floor(Math.random());
   if (rand < 0.5){
     //deactivate revis, set date to reactivate 2 weeks from now
-    fs.writeFileSync(logPath + "revisStudy.txt", Date.now().toString());
-  }
-  else{
-    //keep revis active
-    fs.writeFileSync(logPath + "revisStudy.txt", "0");
+    context.globalState.update("startDisable", Date.now().toString());
   }
 
-  return uuid;
+  //generate first log file
+  fs.writeFileSync(logDir + "/log1.json", JSON.stringify({uuid: uuid, logCount: 1}) + '\n', {flag: 'a'});
+  //set config to enable logging
+  vscode.workspace.getConfiguration("salt").update("errorLogging", true);
 }
 
 /**
  * Initializes a new log file
  * @param logDir directory for log files
- * @param newLog if we are creating a new log file
+ * @param uuid if we are creating a new log file
  * @returns path of current log, line count, and the stream
  */
-function openLog(logDir: string, newLog: boolean): [string, number, fs.WriteStream]{
+function openLog(logDir: string, uuid: string): [string, number, fs.WriteStream]{
   //find how many json files are in folder to determine current log #
   let fileCount = fs.readdirSync(logDir)
     .filter(f => path.extname(f) === ".json").length;
   
-  if (newLog){
+  //new logs must provide a UUID
+  if (uuid !== ""){
     fileCount++;
   }
   const logPath = logDir + "/log" + fileCount + ".json";
-
-  if (!newLog){
-    fs.writeFileSync(logPath, "{\"extension reload, revis enabled:" + enableRevis + "\"}\n", {flag: 'a'});
+  if (uuid !== ""){
+    fs.writeFileSync(logPath, JSON.stringify({uuid: uuid, logCount: fileCount}) + '\n', {flag: 'a'});
   }
   else{
-    fs.writeFileSync(logPath, "{\"insert new header here, log: "+ fileCount +"\"}\n", {flag: 'a'});
+    fs.writeFileSync(logPath, "{extension reload, "
+      + JSON.stringify({studyEnabled: enableExt}) + "}\n", {flag: 'a'});
   }
 
   //count lines in current log

@@ -173,10 +173,10 @@
         <br/>
         <h2>Participation Agreement</h2>
         <form>
-            <input type="radio" id="agree" name="agreement" value=true>
+            <input type="radio" id="agree" name="agreement" value="yes">
             <label for="agree">Yes, I agree to participate in this study.</label>
             <br>
-            <input type="radio" id="disagree" name="agreement" value=false>
+            <input type="radio" id="disagree" name="agreement" value="no">
             <label for="disagree">No, I would not like to participate.</label>
             <br>
         </form>
@@ -221,11 +221,21 @@
             //     //close webview
             // }
             const vscode = acquireVsCodeApi();
-            vscode.postMessage({
-                command: 'submitConsentForm',
-                text: "test"
-            });
-
+            if (document.getElementById("agree").checked){
+                vscode.postMessage({
+                    command: 'submitConsentForm',
+                    text: "yes"
+                });
+            }
+            if (document.getElementById("disagree").checked){
+                vscode.postMessage({
+                    command: 'submitConsentForm',
+                    text: "no"
+                });
+            }
+            else{
+                //include text asking them to select an option
+            }
         });
         </script>
     </html>
