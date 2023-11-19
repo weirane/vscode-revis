@@ -7,7 +7,7 @@ import * as fs from "fs";
 import * as path from "path";
 import TelemetryReporter from '@vscode/extension-telemetry';
 import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
-import { FormPanel } from "./research/form";
+//import { FormPanel } from "./research/form";
 import * as crypto from 'crypto';
 
 
@@ -31,7 +31,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   //Check if logfile exists, if not create an empty one and render form
   //if (!fs.existsSync(logDir + "/log1.json")){
-    FormPanel.render(context.extensionPath + "/src/research/survey.html");
+  renderForm(context.extensionPath + "/src/research/consentForm.html");
     //fs.writeFileSync(logDir + "/log1.json", "");
   //}
 
@@ -89,10 +89,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerTextEditorCommand("salt.toggleVisualization", toggleVisualization)
   );
   //command not working
-  context.subscriptions.push(
-    vscode.commands.registerCommand("salt.researchParticipation", FormPanel.render)
-
-  );
+  // context.subscriptions.push(
+  //   vscode.commands.registerCommand("salt.researchParticipation", FormPanel.render)
+  // );
   context.subscriptions.push(
     vscode.commands.registerTextEditorCommand(
       "salt.clearAllVisualizations",
@@ -133,6 +132,25 @@ export function activate(context: vscode.ExtensionContext) {
         }, 2000);
       }
     })
+  );
+}
+
+function renderForm(path: string){
+  const panel = vscode.window.createWebviewPanel(
+    'form',
+    'Consent Form',
+    vscode.ViewColumn.One,
+    {
+      enableScripts: true
+    }
+  );
+
+  panel.webview.html = fs.readFileSync(path, 'utf8');
+
+  panel.webview.onDidReceiveMessage(
+    message => {
+      console.log(message);
+    }
   );
 }
 

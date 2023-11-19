@@ -187,7 +187,7 @@
         <br/><br/>
         
         <form>
-            <button id="submit">Submit</button>
+            <button type="button" id="submit">Submit</button>
         </form>
 
         <script>
@@ -220,11 +220,10 @@
             // else{
             //     //close webview
             // }
-
-            
+            const vscode = acquireVsCodeApi();
             vscode.postMessage({
                 command: 'submitConsentForm',
-                text: document.getElementById("agreement").value
+                text: "test"
             });
 
         });

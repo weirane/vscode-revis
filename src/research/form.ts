@@ -16,7 +16,7 @@ export class FormPanel {
       this._panel.webview.html = this.getHTML(path);
     }
 
-    public static render(path: string){
+    public static render(path: string): FormPanel{
         if (FormPanel.currentPanel){
             FormPanel.currentPanel._panel.reveal(vscode.ViewColumn.One);
         }
@@ -32,6 +32,7 @@ export class FormPanel {
 
             FormPanel.currentPanel = new FormPanel(panel, path);
         }
+        return FormPanel.currentPanel;
     }
 
     public dispose() {
