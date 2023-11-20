@@ -17,6 +17,8 @@ let intervalHandle: number | null = null;
 
 const SENDINTERVAL = 100;
 const NEWLOGINTERVAL = 1000;
+const TWO_WEEKS = 1209600;
+const YEAR = 31536000;
 const key = "cdf9fbe6-bfd3-438a-a2f6-9eed10994c4e";
 const initialStamp = Math.floor(Date.now() / 1000);
 let visToggled = false;
@@ -41,17 +43,26 @@ export function activate(context: vscode.ExtensionContext) {
       stream: fs.WriteStream, output: vscode.LogOutputChannel, uuid: string;
   if (vscode.workspace.getConfiguration("salt").get("errorLogging")
       && context.globalState.get("participation") === true){
+
+    //if a year has passed, disable logging
+    let startDate = context.globalState.get("startDate");
+    if (typeof startDate === 'number' && initialStamp > startDate + YEAR){
+      vscode.workspace.getConfiguration("salt").update("errorLogging", false);
+      context.globalState.update("participation", false);
+      return;
+    }
+
+    //init telemetry reporter
     reporter = new TelemetryReporter(key);
     context.subscriptions.push(reporter);
 
     //disable tool if still in study period
-    if (context.globalState.get("startDisable") !== undefined){
-      let startDisable = context.globalState.get("startDisable");
-      if (typeof startDisable === 'number' && Date.now() < startDisable + 1209600000){
+    if (context.globalState.get("disableRevis") !== undefined){
+      if (typeof startDate === 'number' && initialStamp < startDate + TWO_WEEKS){
         enableExt = false;
       }
       else {
-        context.globalState.update("startDisable", undefined);
+        context.globalState.update("disableRevis", undefined);
       }
     }
 
@@ -61,8 +72,12 @@ export function activate(context: vscode.ExtensionContext) {
     if (typeof context.globalState.get("uuid") === "string"){
       uuid = context.globalState.get("uuid") as string;
     }
-    //should also check if telemetry is enabled globally
-    //if not, ask user to enable it or disable logging in extension settings
+
+    //check if telemetry is enabled globally
+    if (!vscode.env.isTelemetryEnabled){
+      vscode.window.showWarningMessage(
+        "Please enable telemetry to participate in the study. You can do this by going to Code > Settings > Settings and searching for 'telemetry'.");
+    }
   }
 
   //settings.json config to get rustc err code
@@ -190,6 +205,7 @@ function renderSurvey(context: vscode.ExtensionContext){
       const fileCount = fs.readdirSync(logDir).filter(f => path.extname(f) === ".json").length;
       const logPath = logDir + "/log" + fileCount + ".json";
       fs.writeFileSync(logPath, JSON.stringify({survey: message.text}) + '\n', {flag: 'a'});
+      panel.dispose();
     }
   );
 }
@@ -203,15 +219,16 @@ function initStudy(context: vscode.ExtensionContext){
 
   //generate UUID
   const uuid = crypto.randomBytes(16).toString('hex');
-  //write UUID to global state
   context.globalState.update("uuid", uuid);
 
   //generate 50/50 chance of revis being active
   const rand = Math.floor(Math.random());
   if (rand < 0.5){
     //deactivate revis, set date to reactivate 2 weeks from now
-    context.globalState.update("startDisable", Date.now().toString());
+    context.globalState.update("disableRevis", true);
   }
+
+  context.globalState.update("startDate", Math.floor(Date.now() / 1000).toString());
 
   //generate first log file
   fs.writeFileSync(logDir + "/log1.json", JSON.stringify({uuid: uuid, logCount: 1, studyEnabled: enableExt}) + '\n', {flag: 'a'});
@@ -269,6 +286,7 @@ function sendTelemetry(logPath: string, reporter: TelemetryReporter){
  */
 function logError(stream: fs.WriteStream, editor: vscode.TextEditor, time: number, output: vscode.LogOutputChannel){
 
+  console.log("logging error");
   let doc = editor.document;
   //filter for only rust errors
   if (doc.languageId !== "rust") {
