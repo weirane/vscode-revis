@@ -1,9 +1,26 @@
-# REVIS
+# SALT for Rust!
 
-## Features
+![saltLogo](assets/salt.png)
 
-Visualize lifetime-related Rust compiler errors.
+## Situationally Adaptive Language Tutor (SALT)
+Researchers at the University of California, San Diego are conducting a research study on Rust errors and how we can help make it easier to learn Rust. We have developed a free Visual Studio Code extension, SALT, which includes features that may be helpful while you’re learning Rust, such as REVIS, a borrowing and ownership error visualizer. If you grant permission, the extension can also send us data regarding the errors you’ve experienced while compiling Rust code; we plan to use that information to evaluate the impact of our extension as well as to give you feedback on your progress.
+
+## Current features
+
+### REVIS
+
+REVIS visualizes lifetime-related Rust compiler errors.
 This extension focuses on errors with a "timeline" that can be visualized.
+![example](assets/example597.png)
+
+### Error Logging
+
+Custom error logs are generated to minimize privacy concern and only start after you provide consent. A live trace of errors being logged can be viewed in the `SALT-logger` Output Channel.
+
+A log entry is created every time the program is built, consisting of a hash representing the current file, seconds since the extension initialized, whether REVIS was used, and a list of error data.
+Each element in the list represents a single error containing the error code, a hash representing the error message, whether it came from rust-analyzer or rustc, and the start and end line numbers.
+
+Logs are stored locally and are sent in intervals for analysis. After enough data has been gathered, we intend to provide users with evaluations of their progress in encountering and debugging errors!
 
 ## Requirements
 
@@ -18,13 +35,18 @@ The configuration will be added to `.vscode/settings.json` under the project roo
 
 [rust-analyzer]: https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer
 
-## How to use
+## How to participate
+
+Anyone age 18 or older at any level of programming experience is encouraged to participate! The first time you open a Rust project, you will recieve the consent form in a Webview. After agreeing, you'll be asked to complete a short survey about your experience in programming. Both the consent form and the survey can be accessed at any time via the commands `salt.renderConsentForm` and `salt.renderSurvey`.
+You may opt-out of the study by going to the extension settings and disabling `salt.errorLogging`. Re-enable it at any time to opt back in!
+
+## How to use REVIS
 
 Right-pointing red triangles will be displayed for supported errors after the source file is saved.
-To display/hide the visualization, **move the text cursor to the line** with the red triangle and execute command `revis.toggleVisualization` or use the keyboard shortcut **<kbd>Ctrl+Shift+V</kbd>**.
-To clear all visualizations, execute command `revis.clearAllVisualizations`.
+To display/hide the visualization, **move the text cursor to the line** with the red triangle and execute command `salt.toggleVisualization` or use the keyboard shortcut **<kbd>Ctrl+Shift+V</kbd>**.
+To clear all visualizations, execute command `salt.clearAllVisualizations`.
 To refresh the visualizations, save the current file.
 
 ## Note
 
-This extension is still in an early stage. Please file an issue or contact Ruochen (wangrc@ucsd.edu) if you find any bugs/confusing points.
+This extension is still in an early stage. Please file an issue or contact  Molly (mmaclaren@ucsd.edu) if you find any bugs/confusing points.

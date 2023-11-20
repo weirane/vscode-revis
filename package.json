@@ -1,8 +1,8 @@
 {
   "name": "errorviz",
-  "publisher": "weirane",
+  "publisher": "kale-lab",
   "displayName": "SALT",
-  "icon": "assets/errorviz-256x256.png",
+  "icon": "assets/salt.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/mojeanmac/vscode-salt"
@@ -32,9 +32,14 @@
         "title": "SALT: Clear All Visualizations"
       },
       {
-        "command": "salt.researchParticipation",
+        "command": "salt.renderConsentForm",
         "title": "SALT: View Consent to Participate in Research"
+      },
+      {
+        "command": "salt.renderSurvey",
+        "title": "SALT: View Survey"
       }
+
     ],
     "keybindings": [
       {
@@ -42,12 +47,6 @@
         "mac": "cmd+shift+v",
         "when": "editorTextFocus && editorLangId == 'rust'",
         "command": "salt.toggleVisualization"
-      },
-      {
-        "key": "ctrl+shift+r",
-        "mac": "cmd+shift+r",
-        "when": "editorLangId == 'rust'",
-        "command": "salt.researchParticipation"
       }
     ],
     "configuration": {

@@ -76,7 +76,7 @@ export function activate(context: vscode.ExtensionContext) {
     //check if telemetry is enabled globally
     if (!vscode.env.isTelemetryEnabled){
       vscode.window.showWarningMessage(
-        "Please enable telemetry to participate in the study. You can do this by going to Code > Settings > Settings and searching for 'telemetry'.");
+        "Please enable telemetry to participate in the study. Do this by going to Code > Settings > Settings and searching for 'telemetry'.");
     }
   }
 
@@ -110,10 +110,28 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerTextEditorCommand("salt.toggleVisualization", toggleVisualization)
   );
-  //instead, render a copy of the consent form
-  // context.subscriptions.push(
-  //   vscode.commands.registerCommand("salt.researchParticipation", FormPanel.render)
-  // );
+  //render consent form
+  context.subscriptions.push(
+    vscode.commands.registerCommand("salt.renderConsentForm",
+      () => {
+        if (context.globalState.get("participation") === true){
+          const panel = vscode.window.createWebviewPanel(
+            'form',
+            'SALT Study Consent Form',
+            vscode.ViewColumn.One
+          );
+          panel.webview.html = fs.readFileSync(context.extensionPath + "/src/research/consentformCopy.html", 'utf8');
+        }
+        else {
+          renderConsentForm(context);
+        }
+    }));
+  //render survey
+  context.subscriptions.push(
+    vscode.commands.registerCommand("salt.renderSurvey",
+      () => {if (context.globalState.get("participation") === true){
+        renderSurvey(context);
+      }}));
   context.subscriptions.push(
     vscode.commands.registerTextEditorCommand(
       "salt.clearAllVisualizations",
@@ -167,7 +185,7 @@ function renderConsentForm(context: vscode.ExtensionContext){
     }
   );
   
-  panel.webview.html = fs.readFileSync(context.extensionPath + "/src/research/consentForm.html", 'utf8');
+  panel.webview.html = fs.readFileSync(context.extensionPath + "/src/research/consentform.html", 'utf8');
 
   panel.webview.onDidReceiveMessage(
     message => {
@@ -205,7 +223,7 @@ function renderSurvey(context: vscode.ExtensionContext){
       const fileCount = fs.readdirSync(logDir).filter(f => path.extname(f) === ".json").length;
       const logPath = logDir + "/log" + fileCount + ".json";
       fs.writeFileSync(logPath, JSON.stringify({survey: message.text}) + '\n', {flag: 'a'});
-      panel.dispose();
+      panel.webview.html = fs.readFileSync(context.extensionPath + "/src/research/survey.html", 'utf8');
     }
   );
 }
