@@ -6,7 +6,7 @@ import { codeFuncMap } from "./visualizations";
 import * as fs from "fs";
 import * as path from "path";
 import TelemetryReporter from '@vscode/extension-telemetry';
-import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
+//import { DynamoDBClient, PutItemCommand } from "@aws-sdk/client-dynamodb";
 //import { FormPanel } from "./research/form";
 import * as crypto from 'crypto';
 
