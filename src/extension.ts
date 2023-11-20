@@ -37,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
   //if (context.globalState.get("participation") === undefined){
     renderConsentForm(context);
   //}
-
+  
   //if logging is enabled, initialize reporter, log file, and line count
   let reporter: TelemetryReporter, logPath: string, linecnt: number,
       stream: fs.WriteStream, output: vscode.LogOutputChannel, uuid: string;
@@ -286,7 +286,6 @@ function sendTelemetry(logPath: string, reporter: TelemetryReporter){
  */
 function logError(stream: fs.WriteStream, editor: vscode.TextEditor, time: number, output: vscode.LogOutputChannel){
 
-  console.log("logging error");
   let doc = editor.document;
   //filter for only rust errors
   if (doc.languageId !== "rust") {
