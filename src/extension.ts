@@ -34,7 +34,6 @@ export function activate(context: vscode.ExtensionContext) {
   //if not, render it!
   //if (context.globalState.get("participation") === undefined){
     renderConsentForm(context);
-    console.log(context.globalState.get("participation"));
   //}
 
   //if logging is enabled, initialize reporter, log file, and line count
@@ -146,7 +145,7 @@ export function activate(context: vscode.ExtensionContext) {
 function renderConsentForm(context: vscode.ExtensionContext){
   const panel = vscode.window.createWebviewPanel(
     'form',
-    'Consent Form',
+    'SALT Study Consent Form',
     vscode.ViewColumn.One,
     {
       enableScripts: true
@@ -178,11 +177,21 @@ function renderSurvey(context: vscode.ExtensionContext){
     {
       enableScripts: true
     }
-        
   );
-  
+
   panel.webview.html = fs.readFileSync(context.extensionPath + "/src/research/survey.html", 'utf8');
 
+  panel.webview.onDidReceiveMessage(
+    message => {
+      console.log(message.text);
+      context.globalState.update("survey", message.text);
+      //write to latest log
+      const logDir = context.globalStorageUri.fsPath;
+      const fileCount = fs.readdirSync(logDir).filter(f => path.extname(f) === ".json").length;
+      const logPath = logDir + "/log" + fileCount + ".json";
+      fs.writeFileSync(logPath, JSON.stringify({survey: message.text}) + '\n', {flag: 'a'});
+    }
+  );
 }
 
 /**
@@ -230,8 +239,7 @@ function openLog(logDir: string, uuid: string): [string, number, fs.WriteStream]
     fs.writeFileSync(logPath, JSON.stringify({uuid: uuid, logCount: fileCount, studyEnabled: enableExt}) + '\n', {flag: 'a'});
   }
   else{
-    fs.writeFileSync(logPath, ""
-      + JSON.stringify({extensionReload: {studyEnabled: enableExt}}) + "\n", {flag: 'a'});
+    fs.writeFileSync(logPath, JSON.stringify({extensionReload: {studyEnabled: enableExt}}) + '\n', {flag: 'a'});
   }
 
   //count lines in current log

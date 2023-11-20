@@ -6,6 +6,7 @@
 
 <!DOCTYPE html>
     <html>
+        <h3>You've been invited by SALT to...</h3>
         <h1>Participate in Academic Research!</h1>
         <p class="parabreak">
             <i><b>Note:</b></i> In this consent the word “you” refers to the person being considered for enrollment in the study described.
@@ -223,21 +224,25 @@
             // else{
             //     //close webview
             // }
+            let agree = document.getElementById("agree").checked;
+            let disagree = document.getElementById("disagree").checked;
+
+            if (!agree && !disagree){
+                return;
+            }
+
             const vscode = acquireVsCodeApi();
-            if (document.getElementById("agree").checked){
+            if (agree){
                 vscode.postMessage({
                     command: 'submitConsentForm',
                     text: "yes"
                 });
             }
-            if (document.getElementById("disagree").checked){
+            if (disagree){
                 vscode.postMessage({
                     command: 'submitConsentForm',
                     text: "no"
                 });
-            }
-            else{
-                //include text asking them to select an option
             }
         });
         </script>
